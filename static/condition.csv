@@ -1,0 +1,6 @@
+Id,Value,Type,FrontCondType,FrontCond,Comment
+IF0001,"[""tmp_achieve"",""level"",""count"",5]",0,0,[],通关任意主线关卡
+IF0002,"[""tmp_achieve"",""MA0102"",""count"",2]",0,0,[],通关第2关
+IF0003,"[""tmp_achieve"",""MA0103"",""count"",2]",0,0,[],通关第3关
+IF0004,"[""tmp_achieve"",""MA0104"",""count"",2]",0,0,"[[""level"",""MA0103"",""star"",1]]",通关第4关
+IF0005,"[""achieve"",""MA0102"",""star"",1]",1,0,"[[""level"",""MA0101"",""star"",1]]",通关第二关累计获得心

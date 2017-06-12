@@ -1,0 +1,51 @@
+key,value,
+layer_path,prefabs/layer/,
+level_path,prefabs/level/,
+scene_path,prefabs/scene/,
+effect_path,prefabs/effect/,
+spr_path,texture/item/,
+wares_path,texture/store/,
+pic_path,prefabs/journal/,
+puzzle_path,texture/journal/,
+friend_path,prefabs/friend/friend_detail,
+head_icon_path,texture/icon/,
+bonus_path,prefabs/bonus/,
+mail_path,prefabs/mail/,
+common_path,prefabs/common/,
+item_path,prefabs/item/,
+avatar_path,prefabs/avatar/,
+head_icon_path,texture/icon/,
+map_node_path,prefabs/map/,
+hint_raise_path,prefabs/effect/,
+score_base,1000,
+combo_base_time,3,
+max_combo_count,5,
+combo_base_score,0.1,
+time_tip_percent,0.15,
+score_time,500,
+punish_time,5,
+revive_time,15,
+revive_add_time,20,
+crystal_store,"[""ST0001"",""ST0002"",""ST0003"",""ST0004"",""ST0005"",""ST0006""]",
+coin_store,ST0011,
+daily_task_activity_reward,"[[""currency"",""IT0011"",""count"",100],[""currency"",""IT0011"",""count"",200],[""currency"",""IT0011"",""count"",300]]",
+daily_task_activity_step,"[30,60,100]",
+daily_task_count,10,
+default_dress,"{""27_0000_25"":1, ""30_0000_05"":1, ""05_0000_04"":1, ""26_0000_24"":1, ""02_0000_01"":1}",默认装扮
+friend_number,50,好友上限
+energy_flask,"[[""IT0021"",""IT0022"",""IT0023""], [""null"", ""ST0022"", ""ST0023""]]",体力瓶
+default_customs,MA00101,默认关卡
+rank_energy,1,每次升级体力上限增长
+change_name,"[""currency"",""IT0001"",""count"",50]",每次更改名字所需消耗（钻）
+mail_need,1800,客户端每格多少时间后向服务器请求阅读邮件（紧急邮件通过跑马灯的形式出现）
+item_cooling_time,2,PK道具冷却CD
+alone_item_cooling_time,1,单机道具冷却CD
+arena_item,"[""IT0201"",""IT0202"",""IT0203"",""IT0217""]",多人游戏道具
+arena_theme,"{""season"":1, ""title"":""UI_PK_THEME1"", ""data"":""UI_PK_THEME1_MEAN""}",多人游戏主题名字
+arena_times,"{""0"":4,""1"":6,""2"":6,""3"":4,""4"":3,""5"":5,""6"":13}",多人游戏每个类型抽多少张地图
+arena_tyep_page,"{""0"":""arena_text"",""1"":""arena_shadow"",""2"":""arena_minpic"",""3"":""arena_diff"",""4"":""arena_jigsaw"",""5"":""arena_type"",""6"":""arena_doubt""}",多人游戏类型和关卡的映射
+arena_star,5,PK开始倒计时
+arena_over,10,PK结束倒计时
+avatar_resolve_must_get_id,IT0300,分解必定掉落道具ID
+avatar_resolve_must_get_list,"[3, 6, 9, 15, 24]",分解星级对应的必定获得道具数量
+avatar_resolve_drop_by_star,"[""AR01"", ""AR02"", ""AR03"", ""AR04"", ""AR05""]",分解星级对应的概率获得物品掉落池

@@ -1,0 +1,6 @@
+Id,CDTime,InitCount,MaxCount,MinCount,IsCanOutMax,Type,DailyRefresh,Refresh,InCDCount,Tip
+CD101,300,30,30,0,1,0,0,0,0,能量
+CD102,172800,1,1,0,0,1,0,0,0,免费抽奖CD
+CD103,172800,1,1,0,0,1,0,0,0,免费抽奖CD
+CD202,172800,10000,10000,0,0,1,1,10000,0,每日10次数上限CD
+CD203,172800,10000,10000,0,0,1,1,10000,0,每日10次数上限CD

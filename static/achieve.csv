@@ -1,0 +1,5 @@
+Id,Path,i18nID,Value
+AE0101,texture/item/icon_crystal,UI_PROFILE_STARS,"[""achieve"",""level"",""star""]"
+AE0102,texture/item/icon_goldcoins,UI_PROFILE_KEY,"[""achieve"",""key"",""count""]"
+AE0103,texture/item/icon_crystal,UI_PROFILE_JOURNEY,"[""achieve"",""diary"",""count""]"
+AE0104,texture/item/icon_goldcoins,UI_PROFILE_COLLECTION,"[""achieve"",""collection"",""count""]"

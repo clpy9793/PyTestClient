@@ -1,0 +1,2 @@
+ID,LoginURL,LoginPort,ChannelID,ThirdURL,ThirdPort,CDN,CDNEx,Auto,LoginType,PayType,ShareType,
+SYS001,192.168.1.248,8021,disney_219,192.168.1.248,8022,http://disneypublish-10061406.file.myqcloud.com/,http://disneypublish-10061406.file.myqcloud.com/,"{0, 2}",{0},5,2,???????

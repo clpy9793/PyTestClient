@@ -1,0 +1,5 @@
+Id,Desc,Percent,BuffValue,Note
+BF0001,L00400,0,"[""level_last_time"",20,""time""]",加时间
+BF0002,L00401,1,"[""baseCoins"",0.5,""""]",加金币
+BF0003,L00402,1,"[""score_time"",0.2,""""]",加时间基础分
+BF0004,L00403,1,"[""score_base"",0.5,""""]",加分数

@@ -1,0 +1,6 @@
+Id,Type,Activity,Reward,Condition
+DT0001,1,10,"[""currency"",""IT0002"",""count"",1]",IF0001
+DT0002,2,10,"[""currency"",""IT0002"",""count"",1]",IF0002
+DT0003,3,10,"[""currency"",""IT0002"",""count"",1]",IF0003
+DT0004,4,10,"[""currency"",""IT0002"",""count"",1]",IF0004
+DT0005,5,10,"[""currency"",""IT0002"",""count"",1]",IF0005
