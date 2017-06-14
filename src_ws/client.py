@@ -9,9 +9,12 @@ import os
 import time
 import uuid
 import random
+import struct
 import hashlib
 import asyncio
 import aiohttp
+import binascii
+import websockets
 from aiohttp import ClientSession
 from config import *
 try:
@@ -20,8 +23,8 @@ except ImportError:
     import json
 
 
-
-
+ST_INIT = 0
+ST_LOGIN = 1
 
 
 class HttpSession(object):
@@ -54,6 +57,7 @@ class HttpSession(object):
         if data is None:
             data = {}
         data.update(self.make_sign())
+        print(url, data)
         async with self.session.post(url, data=data) as resp:
             ret = await resp.text(encoding='utf8')
             try:
@@ -71,6 +75,86 @@ class HttpSession(object):
     def close(self):
         self._session.close()
 
+
+class WebSocketSession(object):
+    '''WebSocketSession'''
+
+    def __init__(self, host, port, cookies=None, headers=None):
+        if cookies is None:
+            cookies = {}
+        if headers is None:
+            headers = {}
+        self._session = None
+        self.host = host
+        self.port = port
+
+    @property
+    async def session(self):
+        if self._session is None or self._session.state != 1:
+            print(self.host, self.port)
+            self._session = await websockets.connect('ws://{}:{}'.format(self.host, self.port))
+        return self._session
+
+    def make_sign(self, key=None):
+        '''时间戳签名'''
+        if key is None:
+            key = PACKAGE_KEY
+        res = {}
+        now = int(time.time())
+        res['check_time_stamp'] = now
+        res['check_sign'] = hashlib.md5("{0}{1}".format(now, key).encode('utf8')).hexdigest()
+        return res
+
+    def dumps(self, param):
+        '''ws封包'''
+        EVENT_FLAG = 21586
+        stream = []
+        msg_id = param['msg_id']
+        del param['msg_id']
+        param.pop('msg_id', 0)
+        param.pop('url', 0)
+        data = json.dumps(param)
+        # data = param
+        data_stream = list(map(lambda x: ord(x), data))
+        # key_start = random.randint(0, len(PACKAGE_KEY) - 1)
+        # data_stream = list(msgpack.packb(data))
+        # data_stream = list(map(lambda x: ord(x), list(msgpack.packb(data))))
+        # data_stream = encrypt_data(data_stream, key_start, len(data_stream))
+        length = len(data_stream) + 8
+        stream.append(EVENT_FLAG & 0xff)
+        stream.append(EVENT_FLAG >> 8)
+        stream.append(length & 0xff)
+        stream.append(length >> 8)
+        stream.append(msg_id & 0xff)
+        stream.append((msg_id >> 8) & 0xff)
+        stream.append((msg_id >> 16) & 0xff)
+        stream.append(msg_id >> 24)
+        # stream.append(key_start & 0xff)
+        # stream.append(key_start >> 8)
+        stream.extend(data_stream)
+        stream = list(map(lambda x: "{:02x}".format(ord(x) if isinstance(x, str) else x), stream))
+        stream = "".join(stream)
+        return stream
+
+    def loads(self, data):
+        data = binascii.unhexlify(data)
+        ret = json.loads(data[8:].decode())
+        return ret
+
+    async def post(self, data=None):
+        if data is None:
+            return
+        data = self.dumps(data)
+        session = await self.session
+        await session.send(data)
+        # ret = await session.recv()
+        # self.loads(ret)
+
+    async def get(self):
+        pass
+
+    def close(self):
+        self._session.close()
 
 
 class AccountClient(object):
@@ -94,7 +178,9 @@ class AccountClient(object):
             self.token = ret['token']
             self.refresh_token = ret['refresh_token']
             self.user_id = ret['user_id']
-            return ret
+        else:
+            print(ret)
+        return ret
 
 
 class GatewayClient(object):
@@ -103,17 +189,38 @@ class GatewayClient(object):
     def __init__(self, data, session=None):
         ''''''
         if session is None:
-            self.session = HttpSession()
+            self.session = WebSocketSession(GATEWAY_HOST, GATEWAY_PORT)
         else:
             self.session = session
         self.token = data['token']
         self.refresh_token = data['refresh_token']
         self.user_id = data['user_id']
-        self.url = 'http://{}:{}/gate_http'.format(GATEWAY_HOST, GATEWAY_PORT) 
         self.session_key = None
         self.player_id = None
         self.player_info = None
         self.package = None
+        self.state = 0
+
+    @staticmethod
+    async def run():
+        ''''''
+        c = AccountClient(ACCOUNT_HOST, ACCOUNT_PORT)
+        ret = await c.auth()
+        c.session.close()
+        c = GatewayClient(ret)
+        await c.login()
+        session = await c.session.session
+        ret = await session.recv()
+        ret = c.session.loads(ret)
+        print(ret)
+        c.token = ret['token']
+        c.refresh_token = ret['refresh_token']
+        c.session_key = ret['session_key']
+        await c.player_login()
+        ret = await session.recv()
+        ret = c.session.loads(ret)
+        # c.session.close() 
+        return c
 
     async def test_add_all_avatar(self):
         '''msg_id: 3002'''
@@ -149,7 +256,7 @@ class GatewayClient(object):
         ret = await self.session.post(self.url, data)
         if ret.get('result'):
             pass
-        return ret        
+        return ret
 
     async def login(self):
         '''msg_id: 10001'''
@@ -158,12 +265,11 @@ class GatewayClient(object):
         data['user_id'] = self.user_id
         data['token'] = self.token
         data['refresh_token'] = self.refresh_token
-        url = 'http://{}:{}/gate_login'.format(GATEWAY_HOST, GATEWAY_PORT) 
-        ret = await self.session.post(url, data)
-        if ret.get('result'):
-            self.token = ret['token']
-            self.refresh_token = ret['refresh_token']
-            self.session_key = ret['session_key']
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     self.token = ret['token']
+        #     self.refresh_token = ret['refresh_token']
+        #     self.session_key = ret['session_key']
         return ret
 
     async def player_login(self):
@@ -172,12 +278,13 @@ class GatewayClient(object):
         data['msg_id'] = 10003
         data['session_key'] = self.session_key
         data['user_id'] = self.user_id
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            self.player_id = ret['player_id']
-            self.player_info = ret['data']['player_info']
-            self.package = ret['data']['package']
-            self.cd_pool = ret['data']['player_cd_pool']
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     self.player_id = ret['player_id']
+        #     self.player_info = ret['data']['player_info']
+        #     self.package = ret['data']['package']
+        #     self.cd_pool = ret['data']['player_cd_pool']
+
         return ret
 
     async def login_again(self):
@@ -194,7 +301,6 @@ class GatewayClient(object):
         if ret.get('result'):
             self.player_info['like'] = ret['like']
         return ret
-
 
     async def update_player(self, info=None):
         '''msg_id: 20003'''
@@ -295,7 +401,7 @@ class GatewayClient(object):
         ret = await self.session.post(self.url, data)
         if ret.get('result'):
             pass
-        return ret        
+        return ret
 
     async def avatar_evolution(self, avatar_id):
         '''msg_id: 40007'''
@@ -332,19 +438,9 @@ class GatewayClient(object):
         ret = await self.session.post(self.url, data)
         if ret.get('result'):
             pass
-        return ret        
+        return ret
 
-    @staticmethod
-    async def run():
-        ''''''
-        c = AccountClient(ACCOUNT_HOST, ACCOUNT_PORT)
-        ret = await c.auth()
-        c.session.close()
-        c = GatewayClient(ret)
-        await c.login()
-        await c.player_login()
-        c.session.close()
-        return c
+
 
 
 def main():
