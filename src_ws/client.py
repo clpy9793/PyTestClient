@@ -57,7 +57,6 @@ class HttpSession(object):
         if data is None:
             data = {}
         data.update(self.make_sign())
-        print(url, data)
         async with self.session.post(url, data=data) as resp:
             ret = await resp.text(encoding='utf8')
             try:
@@ -91,7 +90,6 @@ class WebSocketSession(object):
     @property
     async def session(self):
         if self._session is None or self._session.state != 1:
-            print(self.host, self.port)
             self._session = await websockets.connect('ws://{}:{}'.format(self.host, self.port))
         return self._session
 
@@ -200,6 +198,9 @@ class GatewayClient(object):
         self.player_info = None
         self.package = None
         self.state = 0
+        self.is_listen = True
+        self.kv = {}
+        self.task_list = []
 
     @staticmethod
     async def run():
@@ -212,15 +213,52 @@ class GatewayClient(object):
         session = await c.session.session
         ret = await session.recv()
         ret = c.session.loads(ret)
-        print(ret)
         c.token = ret['token']
         c.refresh_token = ret['refresh_token']
         c.session_key = ret['session_key']
         await c.player_login()
         ret = await session.recv()
         ret = c.session.loads(ret)
-        # c.session.close() 
+        # if ret.get('result'):
+        c.player_id = ret['player_id']
+        c.player_info = ret['data']['player_info']
+        c.package = ret['data']['package']
+        c.cd_pool = ret['data']['player_cd_pool']
+        # await session.close()
         return c
+
+    async def event_listen(self):
+        '''处理服务端消息'''
+        session = await self.session.session
+        while True:
+            try:
+                if self.is_listen:
+                    ret = await asyncio.wait_for(session.recv(), 5)
+                    # ret = await session.recv()
+                    ret = self.session.loads(ret)
+                    if ret.get('result'):
+                        msg_id = ret['msg_id']
+                        self.kv[msg_id] = ret                                                   
+                        if msg_id == 10003:
+                            self.player_id = ret['player_id']
+                            self.player_info = ret['data']['player_info']
+                            self.package = ret['data']['package']
+                            self.cd_pool = ret['data']['player_cd_pool']                        
+                    else:
+                        print('\n[ERROR]:\t', ret.get('msg_id'), ret.get('error_code'))
+            except asyncio.TimeoutError:
+                pass
+
+    def pop(self, msg_id):
+        self.kv.pop(msg_id, 0)
+
+    async def wait_for(self, msg_id, timeout=200):
+        for i in range(timeout):
+            await asyncio.sleep(0.01)
+            ret = self.kv.get(msg_id)
+            if ret:
+                return ret
+        return None
 
     async def test_add_all_avatar(self):
         '''msg_id: 3002'''
@@ -228,9 +266,7 @@ class GatewayClient(object):
         data['msg_id'] = 3002
         data['user_id'] = self.user_id
         data['session_key'] = self.session_key
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            pass
+        ret = await self.session.post(data)
         return ret
 
     async def test_add_item(self, item=None):
@@ -241,10 +277,8 @@ class GatewayClient(object):
         data['msg_id'] = 3003
         data['user_id'] = self.user_id
         data['session_key'] = self.session_key
-        data['item'] = json.dumps(item)
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            pass
+        data['item'] = item
+        ret = await self.session.post(data)
         return ret
 
     async def test_add_task(self):
@@ -253,9 +287,7 @@ class GatewayClient(object):
         data['msg_id'] = 3004
         data['user_id'] = self.user_id
         data['session_key'] = self.session_key
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            pass
+        ret = await self.session.post(data)
         return ret
 
     async def login(self):
@@ -266,10 +298,6 @@ class GatewayClient(object):
         data['token'] = self.token
         data['refresh_token'] = self.refresh_token
         ret = await self.session.post(data)
-        # if ret.get('result'):
-        #     self.token = ret['token']
-        #     self.refresh_token = ret['refresh_token']
-        #     self.session_key = ret['session_key']
         return ret
 
     async def player_login(self):
@@ -279,17 +307,12 @@ class GatewayClient(object):
         data['session_key'] = self.session_key
         data['user_id'] = self.user_id
         ret = await self.session.post(data)
-        # if ret.get('result'):
-        #     self.player_id = ret['player_id']
-        #     self.player_info = ret['data']['player_info']
-        #     self.package = ret['data']['package']
-        #     self.cd_pool = ret['data']['player_cd_pool']
-
         return ret
 
     async def login_again(self):
-        await self.login()
-        await self.player_login()
+        pass
+        # await self.login()
+        # await self.player_login()
 
     async def get_player(self):
         '''msg_id: 20001'''
@@ -297,9 +320,9 @@ class GatewayClient(object):
         data['msg_id'] = 20001
         data['session_key'] = self.session_key
         data['user_id'] = self.user_id
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            self.player_info['like'] = ret['like']
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     self.player_info['like'] = ret['like']
         return ret
 
     async def update_player(self, info=None):
@@ -310,11 +333,11 @@ class GatewayClient(object):
         data['msg_id'] = 20003
         data['session_key'] = self.session_key
         data['user_id'] = self.user_id
-        data['player_info'] = json.dumps(info)
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            if ret.get('name'):
-                self.player_info['name'] = ret['name']
+        data['player_info'] = info
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     if ret.get('name'):
+        #         self.player_info['name'] = ret['name']
         return ret
 
     async def get_gam(self):
@@ -323,9 +346,9 @@ class GatewayClient(object):
         data['msg_id'] = 20008
         data['session_key'] = self.session_key
         data['user_id'] = self.user_id
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            pass
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
         return ret
 
     async def get_random_name(self):
@@ -334,9 +357,9 @@ class GatewayClient(object):
         data['msg_id'] = 20009
         data['session_key'] = self.session_key
         data['user_id'] = self.user_id
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            pass
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
         return ret
 
     async def buy_store_item(self, item_id, count=1):
@@ -347,9 +370,9 @@ class GatewayClient(object):
         data['user_id'] = self.user_id
         data['count'] = count
         data['store_item_id'] = item_id
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            pass
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
         return ret
 
     async def get_lottery_reward(self, lottery_id, ltype):
@@ -360,9 +383,9 @@ class GatewayClient(object):
         data['user_id'] = self.user_id
         data['lottery_id'] = lottery_id
         data['ltype'] = ltype
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            pass
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
         return ret
 
     async def enter_level(self, map_id):
@@ -372,9 +395,9 @@ class GatewayClient(object):
         data['session_key'] = self.session_key
         data['user_id'] = self.user_id
         data['map_id'] = map_id
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            pass
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
         return ret
 
     async def complete_level(self, map_id, score, coin):
@@ -386,9 +409,9 @@ class GatewayClient(object):
         data['map_id'] = map_id
         data['score'] = score
         data['coin'] = coin
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            pass
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
         return ret
 
     async def avatar_compound(self, avatar_id):
@@ -398,9 +421,9 @@ class GatewayClient(object):
         data['session_key'] = self.session_key
         data['user_id'] = self.user_id
         data['avatar_id'] = avatar_id
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            pass
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
         return ret
 
     async def avatar_evolution(self, avatar_id):
@@ -410,9 +433,9 @@ class GatewayClient(object):
         data['session_key'] = self.session_key
         data['user_id'] = self.user_id
         data['avatar_id'] = avatar_id
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            pass
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
         return ret
 
     async def avatar_resolve(self, avatar_id):
@@ -421,10 +444,10 @@ class GatewayClient(object):
         data['msg_id'] = 40008
         data['session_key'] = self.session_key
         data['user_id'] = self.user_id
-        data['avatar_id'] = json.dumps({avatar_id: 1})
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            pass
+        data['avatar_id'] = {avatar_id: 1}
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
         return ret
 
     async def avatar_enchant(self, avatar_id, index, count=1):
@@ -435,12 +458,245 @@ class GatewayClient(object):
         data['user_id'] = self.user_id
         data['avatar_id'] = avatar_id
         data['index'] = index
-        ret = await self.session.post(self.url, data)
-        if ret.get('result'):
-            pass
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
         return ret
 
+    async def complete_task(self, task_id, debug=True):
+        '''msg_id: 60005'''
+        data = {}
+        data['msg_id'] = 60005
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['id'] = task_id
+        data['debug'] = debug
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
 
+    async def get_task_progress(self):
+        '''msg_id: 60008'''
+        data = {}
+        data['msg_id'] = 60008
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def get_friend_list(self):
+        '''msg_id: 70001'''
+        data = {}
+        data['msg_id'] = 70001
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def del_friend(self, friend_id):
+        '''msg_id: 70002'''
+        data = {}
+        data['msg_id'] = 70002
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['friend_id'] = friend_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def add_friend(self, friend_id, channel=1):
+        '''msg_id: 70003'''
+        data = {}
+        data['msg_id'] = 70003
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['player_id'] = friend_id
+        data['type'] = channel
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def recommend_friend(self):
+        '''msg_id: 70004'''
+        data = {}
+        data['msg_id'] = 70004
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def get_friend_highest_level(self):
+        '''msg_id: 70007'''
+        data = {}
+        data['msg_id'] = 70007
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def friend_search_by_id(self, friend_id):
+        '''msg_id: 70010'''
+        data = {}
+        data['msg_id'] = 70010
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['player_id'] = friend_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def get_apply_list(self):
+        '''msg_id: 70013'''
+        data = {}
+        data['msg_id'] = 70013
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def agree_friend_apply(self, friend_id):
+        '''msg_id: 70014'''
+        data = {}
+        data['msg_id'] = 70014
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['friend_id'] = friend_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def refuse_friend_apply(self, friend_id):
+        '''msg_id: 70015'''
+        data = {}
+        data['msg_id'] = 70015
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['friend_id'] = friend_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret             
+
+    async def get_friend_map_rank(self, map_id):
+        '''msg_id: 71001'''
+        data = {}
+        data['msg_id'] = 71001
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['map_id'] = map_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def get_map_rank(self, map_id):
+        '''msg_id: 71002'''
+        data = {}
+        data['msg_id'] = 71002
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['map_id'] = map_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def set_like(self, friend_id):
+        '''msg_id: 73001'''
+        data = {}
+        data['msg_id'] = 73001
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['friend_id'] = friend_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def give_energy(self, friend_id):
+        '''msg_id: 75001'''
+        data = {}
+        data['msg_id'] = 75001
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['friend_id'] = friend_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def ask_energy(self, friend_id):
+        '''msg_id: 75002'''
+        data = {}
+        data['msg_id'] = 75002
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['friend_id'] = friend_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret        
+
+    async def get_energy(self):
+        '''msg_id: 75003'''
+        data = {}
+        data['msg_id'] = 75003
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def get_mail_list(self):
+        '''msg_id: 90001'''
+        data = {}
+        data['msg_id'] = 90001
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def read_mail(self, mail_id):
+        '''msg_id: 90004'''
+        data = {}
+        data['msg_id'] = 90004
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['mail_id'] = mail_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret
+
+    async def get_mail_reward(self, mail_id):
+        '''msg_id: 90005'''
+        data = {}
+        data['msg_id'] = 90005
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['mail_id'] = mail_id
+        ret = await self.session.post(data)
+        # if ret.get('result'):
+        #     pass
+        return ret                
 
 
 def main():
