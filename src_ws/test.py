@@ -166,6 +166,7 @@ class GA(unittest.TestCase):
             ret = await self.client.buy_store_item(item_id)
             ret = await self.wait_for(21002)
             self.assertTrue(ret, item_id)
+            print('[INFO]:\tstore\titem_id\t', item_id)
 
         # 测试抽奖
         df = pd.read_csv('../static/lottery.csv')
