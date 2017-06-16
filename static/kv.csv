@@ -49,3 +49,4 @@ arena_over,10,PK结束倒计时
 avatar_resolve_must_get_id,IT0300,分解必定掉落道具ID
 avatar_resolve_must_get_list,"[3, 6, 9, 15, 24]",分解星级对应的必定获得道具数量
 avatar_resolve_drop_by_star,"[""AR01"", ""AR02"", ""AR03"", ""AR04"", ""AR05""]",分解星级对应的概率获得物品掉落池
+active_gift,"{10:[[""currency"",""IT0001"",""count"",10]],40:[[""currency"",""IT0001"",""count"",15]],80:[[""currency"",""IT0001"",""count"",20],115:[[""currency"",""IT0001"",""count"",25],150:[[""currency"",""IT0001"",""count"",30]]}",活跃度礼包

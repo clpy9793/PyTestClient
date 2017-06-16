@@ -1,0 +1,6 @@
+ID,Hint,Times,Path,Award,Active
+DA_0001,HINT_DAILY_COMPOUND,1,{"workShop":{ "type":"CompoundItem"}},"[""currency"", ""IT0011"",""count"", 100]",15
+DA_0002,HINT_DAILY_LEVEL_CONTINUOUS,2,{"level"},"[""item"", ""IT0021"",""count"", 1]",10
+DA_0003,HINT_DAILY_LEVEL,3,{"level"},"[""currency"", ""IT0020"", ""count"", 5]",10
+DA_0004,HINT_DAILY_RESOLVE,4,{"workShop":{ "type":"Resolve"}},"[""currency"", ""IT0020"", ""count"", 5]",15
+DA_0005,HINT_DAILY_ENCHANT,5,{"workShop":{ "type":"EnchantForm"}},"[""currency"", ""IT0020"", ""count"", 5]",15

@@ -26,6 +26,8 @@ except ImportError:
 ST_INIT = 0
 ST_LOGIN = 1
 
+HEART_COIN = "IT0003"
+
 
 class HttpSession(object):
     '''ClientSession'''
@@ -252,6 +254,32 @@ class GatewayClient(object):
     def pop(self, msg_id):
         self.kv.pop(msg_id, 0)
 
+    def get_item(self, package, item_id, attr):
+        '''查询背包'''
+        try:
+            if attr == 'count':
+                return self.package[package][item_id][0]
+            return 0
+        except Exception:
+            return 0
+
+    def set_item(self, package, item_id, attr, val):
+        '''查询背包'''
+        try:
+            if attr == 'count':
+                # self.package.setdefault(package, {}).setdefault(item_id, [])[0] = val
+                self.package.setdefault(package, {})
+                if item_id not in self.package[package]:
+                    self.package[package][item_id] = [0]
+
+                self.package[package][item_id][0] = val
+            return True
+        except Exception:
+            import traceback
+            print(self.package[package])
+            traceback.print_exc()
+            return False         
+
     async def wait_for(self, msg_id, timeout=200):
         for i in range(timeout):
             await asyncio.sleep(0.01)
@@ -362,6 +390,16 @@ class GatewayClient(object):
         #     pass
         return ret
 
+    async def query_package_data(self, item):
+        '''msg_id: 20011'''
+        data = {}
+        data['msg_id'] = 20011
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['item'] = item
+        ret = await self.session.post(data)
+        return ret
+
     async def buy_store_item(self, item_id, count=1):
         '''msg_id: 21002'''
         data = {}
@@ -462,6 +500,15 @@ class GatewayClient(object):
         # if ret.get('result'):
         #     pass
         return ret
+
+    async def get_daily_task(self):
+        '''msg_id: 60001'''
+        data = {}
+        data['msg_id'] = 60001
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        ret = await self.session.post(data)
+        return ret        
 
     async def complete_task(self, task_id, debug=True):
         '''msg_id: 60005'''

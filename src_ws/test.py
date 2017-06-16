@@ -20,14 +20,16 @@ class GA(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(cls.start())
+        pass
+        # loop = asyncio.get_event_loop()
+        # loop.run_until_complete(cls.start())
 
     @classmethod
     def tearDownClass(cls):
-        cls.client.session.close()
-        for i in cls.client.task_list:
-            i.cancel()
+        pass
+        # cls.client.session.close()
+        # for i in cls.client.task_list:
+        #     i.cancel()
 
     @classmethod
     async def start(cls, *args, **kwargs):
@@ -35,12 +37,16 @@ class GA(unittest.TestCase):
 
     def setUp(self):
         loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.start())
+        loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_set_up())
         print()
 
     def tearDown(self):
+        self.client.session.close()
+        for i in self.client.task_list:
+            i.cancel()
         print()
-        pass
 
     async def wait_for(self, msg_id, timeout=200):
         for i in range(timeout):
@@ -66,6 +72,40 @@ class GA(unittest.TestCase):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_player())
 
+    # @unittest.skip('skip')
+    def test_store(self):
+        '''商店'''
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.async_store())
+
+    # @unittest.skip('skip')
+    def test_level(self):
+        '''关卡'''
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.async_level())
+
+    # @unittest.skip('skip')
+    def test_daily_task(self):
+        '''每日任务'''
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.async_daily_task())
+
+    # @unittest.skip('skip')
+    def test_task(self):
+        '''任务'''
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.async_task())
+
+    # @unittest.skip("skip")
+    def test_mail(self):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.async_mail())        
+
+    # @unittest.skip("skip")
+    def test_friend(self):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.async_friend())        
+
     async def async_player(self):
         ''''''
         # 点赞数
@@ -89,12 +129,6 @@ class GA(unittest.TestCase):
         ret = await self.wait_for(10003)
         self.assertEqual(name, self.client.player_info['name'])
 
-    # @unittest.skip('skip')
-    def test_store(self):
-        '''商店'''
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.async_store())
-
     async def async_store(self):
 
         # 测试购买
@@ -106,6 +140,16 @@ class GA(unittest.TestCase):
         self.assertTrue(ret)
 
         item = ['currency', 'IT0001', 'count', 100000000]
+        ret = await self.client.test_add_item(item)
+        ret = await self.wait_for(3003)
+        self.assertTrue(ret)
+
+        item = ['currency', 'IT0002', 'count', 100000000]
+        ret = await self.client.test_add_item(item)
+        ret = await self.wait_for(3003)
+        self.assertTrue(ret)
+
+        item = ['currency', 'IT0003', 'count', 100000000]
         ret = await self.client.test_add_item(item)
         ret = await self.wait_for(3003)
         self.assertTrue(ret)
@@ -132,16 +176,33 @@ class GA(unittest.TestCase):
                 ret = await self.wait_for(21006)
                 self.assertTrue(ret, (i, 1))
 
+                # 验证抽奖获得
+                drop = ret['data']
+                items = {x[1]: x[-1] for x in drop}
+                for item in drop:
+                    self.pop(20011)
+                    await self.client.query_package_data(item[:3])
+                    ret = await self.client.wait_for(20011)
+                    self.assertTrue(ret)
+                    val = self.client.get_item(*item[:3]) + items[item[1]]
+                    self.assertEqual(val, ret['item'][-1], items)
+                    self.client.set_item(*ret['item'])
+
                 self.pop(21006)
                 ret = await self.client.get_lottery_reward(i, 2)
                 ret = await self.wait_for(21006)
                 self.assertTrue(ret, (i, 2))
 
-    # @unittest.skip('skip')
-    def test_level(self):
-        '''关卡'''
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.async_level())
+                drop = ret['data']
+                items = {x[1]: x[-1] for x in drop}
+                for item in drop:
+                    self.pop(20011)
+                    await self.client.query_package_data(item[:3])
+                    ret = await self.client.wait_for(20011)
+                    self.assertTrue(ret)
+                    val = self.client.get_item(*item[:3]) + items[item[1]]
+                    self.assertEqual(val, ret['item'][-1], items)
+                    self.client.set_item(*ret['item'])                
 
     async def async_level(self):
 
@@ -166,17 +227,36 @@ class GA(unittest.TestCase):
             ret = await self.wait_for(30001)
             self.assertTrue(ret, v)
 
+            # 查询过关前获得数量
+            drop = ret['drop']
+            query = []
+            for item in ret['drop']:
+                self.pop(20011)
+                await self.client.query_package_data(item[:3])
+                ret = await self.client.wait_for(20011)
+                self.assertTrue(ret)
+                tmp = ret['item']
+                tmp[-1] += item[-1]
+                query.append(tmp)
+
+
+            query = {i[1]: i[-1] for i in query}
+
             self.pop(30002)
             ret = await self.client.complete_level(v, 10000, 100)
             ret = await self.wait_for(30002)
             self.assertTrue(ret, v)
+
+            # 检验过关后获得道具数量
+            for item in drop:
+                self.pop(20011)
+                await self.client.query_package_data(item[:3])
+                ret = await self.client.wait_for(20011)
+                self.assertTrue(ret['item'][-1], query[item[1]])
+                print('[INFO]:\t', query[item[1]], '', ret['item'][-1])
+
             print('[INFO]:  完成', v)
         # self.client = await GatewayClient.run()
-
-    # @unittest.skip('skip')
-    def test_avatar(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.async_avatar())
 
     async def async_avatar(self):
         df = pd.read_csv('../static/avatar.csv')
@@ -239,11 +319,11 @@ class GA(unittest.TestCase):
             self.assertTrue(ret['result'], v)
             print('[INFO]: 分解 ', v)
 
-    # @unittest.skip('skip')
-    def test_task(self):
-        '''任务'''
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.async_task())
+    async def async_daily_task(self):
+        self.client.pop(60001)
+        await self.client.get_daily_task()
+        ret = await self.client.wait_for(60001)
+        self.assertTrue(ret)
 
     async def async_task(self):
         while True:
@@ -263,10 +343,6 @@ class GA(unittest.TestCase):
                 print(ret)
                 break
         pass
-
-    def test_friend(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.async_friend())
 
     async def async_friend(self):
 
@@ -323,6 +399,12 @@ class GA(unittest.TestCase):
         self.assertTrue(ret)
         li = {i[0] for i in ret['friend_list']}
         self.assertIn(c.player_id, li)
+
+        # 点赞
+        self.client.pop(73001)
+        await self.client.set_like(c.player_id)
+        ret = await self.client.wait_for(73001)
+        self.assertTrue(ret)
 
         # 给予体力
         self.client.pop(75001)
@@ -404,10 +486,6 @@ class GA(unittest.TestCase):
         # 关闭消息处理
         for i in c.task_list:
             i.cancel()
-
-    def test_mail(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.async_mail())
 
     async def async_mail(self):
         # 邮件阅读
