@@ -281,10 +281,13 @@ class GatewayClient(object):
             return False         
 
     async def wait_for(self, msg_id, timeout=200):
+        t1 = time.time()
         for i in range(timeout):
             await asyncio.sleep(0.01)
             ret = self.kv.get(msg_id)
             if ret:
+                t2 = time.time()
+                print('[RES]\n','msg_id:\t', t2 - t1)
                 return ret
         return None
 
@@ -426,7 +429,7 @@ class GatewayClient(object):
         #     pass
         return ret
 
-    async def enter_level(self, map_id):
+    async def enter_level(self, map_id="MA00101"):
         '''msg_id: 30001'''
         data = {}
         data['msg_id'] = 30001
@@ -744,6 +747,47 @@ class GatewayClient(object):
         # if ret.get('result'):
         #     pass
         return ret                
+
+    async def open_test_switch(self):
+        '''
+        测试开关
+        增加金币, 钻石, 能量
+        '''
+        pass
+
+    async def game_flow():
+        '''模拟单线游戏'''
+
+        # 进入游戏
+        map_id = 'MA00101'
+        self.pop(30001)
+        await self.enter_level(map_id)
+        ret = await self.wait_for(30001)
+        if not ret:
+            return
+
+        self.pop(30002)
+        await self.complete_level(map_id, 10000, 100)
+        ret = await self.wait_for(30002)
+        if not ret:
+            return 
+        await asyncio.sleep(1, 3)
+
+    async def friend_flow():
+        '''模拟好友社交'''
+        pass
+
+    async def store_flow():
+        '''模拟商店行为'''
+        pass
+
+    async def chat_flow():
+        '''模拟聊天行为'''
+        pass
+
+    async def avatar_flow():
+        '''模拟 Avatar 行为'''
+        pass
 
 
 def main():
