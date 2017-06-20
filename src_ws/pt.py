@@ -25,7 +25,7 @@ async def start():
             c = await GatewayClient.run()
             await run(c)
         except Exception:
-            await asyncio.sleep(10)
+            exit()
 
 
 

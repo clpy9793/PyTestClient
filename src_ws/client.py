@@ -64,6 +64,7 @@ class HttpSession(object):
             try:
                 ret = json.loads(ret)
                 if not ret.get('result'):
+                    # pass
                     print('[ERROR]:\n{}\t{}'.format(ret.get('msg_id'), ret.get('error_code')))
             except Exception:
                 pass
@@ -203,9 +204,12 @@ class GatewayClient(object):
         self.is_listen = True
         self.kv = {}
         self.task_list = []
+        self.wait_time = 0
+        self.wait_count = 0
 
     @staticmethod
     async def run():
+
         ''''''
         c = AccountClient(ACCOUNT_HOST, ACCOUNT_PORT)
         ret = await c.auth()
@@ -287,8 +291,15 @@ class GatewayClient(object):
             ret = self.kv.get(msg_id)
             if ret:
                 t2 = time.time()
-                print('[RES]\n','msg_id:\t', t2 - t1)
+                # print('[RES]\n', 'msg_id:\t', msg_id, '\t', int(t2 * 1000 - t1 * 1000))
+                self.wait_count += 1
+                self.wait_time += int(t2 * 1000 - t1 * 1000)
+                # print('[AVG]\n', self.wait_time / float(self.wait_count))
+                self.kv.pop(msg_id, 0)
                 return ret
+        print('[INFO]:\t超时')
+        await asyncio.sleep(2)
+        self.kv.pop(msg_id, 0)
         return None
 
     async def test_add_all_avatar(self):
@@ -512,6 +523,26 @@ class GatewayClient(object):
         data['user_id'] = self.user_id
         ret = await self.session.post(data)
         return ret        
+
+    async def get_daily_task_reward(self, task_id):
+        '''msg_id: 60002'''
+        data = {}
+        data['msg_id'] = 60002
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['task_id'] = task_id
+        ret = await self.session.post(data)
+        return ret          
+
+    async def get_daily_task_activity_reward(self, active):
+        '''msg_id: 60003'''
+        data = {}
+        data['msg_id'] = 60003
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['active'] = active
+        ret = await self.session.post(data)
+        return ret   
 
     async def complete_task(self, task_id, debug=True):
         '''msg_id: 60005'''
@@ -755,37 +786,41 @@ class GatewayClient(object):
         '''
         pass
 
-    async def game_flow():
+    async def game_flow(self):
         '''模拟单线游戏'''
+        # 增加体力
 
         # 进入游戏
         map_id = 'MA00101'
         self.pop(30001)
         await self.enter_level(map_id)
         ret = await self.wait_for(30001)
-        if not ret:
+        if not ret or not ret['result']:
             return
+        await asyncio.sleep(random.randint(2, 3))
 
+
+        # 完成游戏
         self.pop(30002)
         await self.complete_level(map_id, 10000, 100)
         ret = await self.wait_for(30002)
-        if not ret:
+        if not ret or not ret['result']:
             return 
-        await asyncio.sleep(1, 3)
+        await asyncio.sleep(random.randint(2, 3))
 
-    async def friend_flow():
+    async def friend_flow(self):
         '''模拟好友社交'''
         pass
 
-    async def store_flow():
+    async def store_flow(self):
         '''模拟商店行为'''
         pass
 
-    async def chat_flow():
+    async def chat_flow(self):
         '''模拟聊天行为'''
         pass
 
-    async def avatar_flow():
+    async def avatar_flow(self):
         '''模拟 Avatar 行为'''
         pass
 

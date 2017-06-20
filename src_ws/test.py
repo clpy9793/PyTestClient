@@ -11,6 +11,10 @@ import unittest
 import pandas as pd
 from client import *
 from contextlib import contextmanager
+try:
+    import ujson as json
+except ImportError:
+    import json
 KV = {}
 
 
@@ -66,19 +70,19 @@ class GA(unittest.TestCase):
         self.client.task_list.append(task)
         # await asyncio.sleep(0.1)
 
-    # @unittest.skip('skip')
+    @unittest.skip('skip')
     def test_player(self):
         '''玩家信息'''
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_player())
 
-    # @unittest.skip('skip')
+    @unittest.skip('skip')
     def test_store(self):
         '''商店'''
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_store())
 
-    # @unittest.skip('skip')
+    @unittest.skip('skip')
     def test_level(self):
         '''关卡'''
         loop = asyncio.get_event_loop()
@@ -90,21 +94,26 @@ class GA(unittest.TestCase):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_daily_task())
 
-    # @unittest.skip('skip')
+    @unittest.skip('skip')
     def test_task(self):
         '''任务'''
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_task())
 
-    # @unittest.skip("skip")
+    @unittest.skip("skip")
     def test_mail(self):
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.async_mail())        
+        loop.run_until_complete(self.async_mail())
 
-    # @unittest.skip("skip")
+    @unittest.skip("skip")
     def test_friend(self):
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.async_friend())        
+        loop.run_until_complete(self.async_friend())
+
+    @unittest.skip("skip")
+    def test_avatar(self):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.async_avatar())
 
     async def async_player(self):
         ''''''
@@ -203,7 +212,7 @@ class GA(unittest.TestCase):
                     self.assertTrue(ret)
                     val = self.client.get_item(*item[:3]) + items[item[1]]
                     self.assertEqual(val, ret['item'][-1], items)
-                    self.client.set_item(*ret['item'])                
+                    self.client.set_item(*ret['item'])
 
     async def async_level(self):
 
@@ -239,7 +248,6 @@ class GA(unittest.TestCase):
                 tmp = ret['item']
                 tmp[-1] += item[-1]
                 query.append(tmp)
-
 
             query = {i[1]: i[-1] for i in query}
 
@@ -321,9 +329,133 @@ class GA(unittest.TestCase):
             print('[INFO]: 分解 ', v)
 
     async def async_daily_task(self):
+        # 初始化
+        df = pd.read_csv('../static/daily.csv')
+        kv = pd.read_csv('../static/kv.csv')
+        active_gift = None
+        for i, v in enumerate(kv.key):
+            if v == 'active_gift':
+
+                active_gift = eval(kv.loc[i, 'value'])
+                break
+            
+        self.assertTrue(active_gift)
+
+        dr = {v: i for i, v in enumerate(df.ID)}
+        actives = 0
+        await self.add_coin()
+
         self.client.pop(60001)
         await self.client.get_daily_task()
         ret = await self.client.wait_for(60001)
+        self.assertTrue(ret)
+        for k, v in ret['List'].items():
+            self.assertEqual(v['plan'], 0, k)
+            self.assertFalse(v['isFinish'], k)
+            self.assertIn(k, dr)
+            print(k, v)
+
+        # 完成每日任务
+        for k, v in dr.items():
+            count = await self.run_task(k, dr, df)
+            actives += count
+
+        for i in active_gift.keys():
+            active = int(i)
+            if active <= actives:
+                pass
+                # 领取活跃度宝箱
+                self.pop(60003)
+                await self.client.get_daily_task_activity_reward(active)
+                ret = await self.client.wait_for(60003)
+                self.assertTrue(ret)
+        print(actives)
+
+
+
+    async def run_task(self, task_id, dr, df):
+        '''进行每日任务'''
+        index = dr[task_id]
+        cond = json.loads(df.loc[index, 'Cond'])
+        if not cond:
+            return 0
+        dtype = cond[0][1]
+        count = cond[0][-1]
+        active = int(df.loc[index, 'Active'])
+        if dtype == 'dr_wish':
+            # 完成
+            for _ in range(count):
+                self.client.pop(21006)
+                await self.client.get_lottery_reward('LY0001', 1)
+                ret = await self.client.wait_for(21006)
+                self.assertTrue(ret)
+        elif dtype == 'dr_level_win':
+            for _ in range(count):
+                self.client.pop(30001)
+                await self.client.enter_level('MA00101')
+                ret = await self.client.wait_for(30001)
+                self.assertTrue(ret)
+
+                self.client.pop(30002)
+                await self.client.complete_level('MA00101', 10000, 100)
+                ret = await self.client.wait_for(30002)
+                self.assertTrue(ret)                
+
+        elif dtype == 'dr_level_times':
+            for _ in range(count):
+                self.client.pop(30001)
+                await self.client.enter_level('MA00101')
+                ret = await self.client.wait_for(30001)
+                self.assertTrue(ret)
+
+                self.client.pop(30002)
+                await self.client.complete_level('MA00101', 10000, 100)
+                ret = await self.client.wait_for(30002)
+                self.assertTrue(ret)    
+        elif dtype == 'dr_shop':
+            return 0
+        elif dtype == 'dr_enc':
+            return 0
+        elif dtype == 'dr_com':
+            return 0
+        elif dtype == 'dr_res':
+            return 0
+        elif dtype == 'dr_pk_win':
+            return 0
+        elif dtype == 'dr_pk_times':
+            return 0
+        elif dtype == 'dr_share':
+            return 0
+        elif dtype == 'dr_friend':
+            return 0
+        elif dtype == 'dr_friend_like':
+            return 0
+        elif dtype == 'dr_mouth':
+            return 0
+        # 领取任务奖励
+        self.pop(60002)
+        await self.client.get_daily_task_reward(task_id)
+        ret = await self.client.wait_for(60002)
+        self.assertTrue(ret)
+        return active
+
+    async def add_coin(self):
+        '''添加货币'''
+        self.pop(3002)
+        await self.client.test_add_all_avatar()
+        ret = await self.wait_for(3002)
+        self.assertTrue(ret)
+
+        item = ['currency', 'IT0011', 'count', 100000000]
+        self.pop(3003)
+        await self.client.test_add_item(item)
+        ret = await self.wait_for(3003)
+        self.assertTrue(ret)
+
+        item = ['currency', 'IT0001', 'count', 100000000]
+        self.pop(3003)
+        await self.client.test_add_item(item)
+        ret = await self.wait_for(3003)
         self.assertTrue(ret)
 
     async def async_task(self):
@@ -482,7 +614,6 @@ class GA(unittest.TestCase):
         self.assertTrue(ret)
         li = ret['data']
         self.assertNotIn(self.client.player_id, [i[0] for i in li])
-
 
         # 关闭消息处理
         for i in c.task_list:
