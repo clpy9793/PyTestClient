@@ -237,21 +237,25 @@ class GatewayClient(object):
         '''处理服务端消息'''
         session = await self.session.session
         while True:
-            try:
-                if self.is_listen:
-                    ret = await asyncio.wait_for(session.recv(), 5)
-                    # ret = await session.recv()
-                    ret = self.session.loads(ret)
-                    if ret.get('result'):
-                        msg_id = ret['msg_id']
-                        self.kv[msg_id] = ret                                                   
-                        if msg_id == 10003:
-                            self.player_id = ret['player_id']
-                            self.player_info = ret['data']['player_info']
-                            self.package = ret['data']['package']
-                            self.cd_pool = ret['data']['player_cd_pool']                        
-                    else:
-                        print('\n[ERROR]:\t', ret.get('msg_id'), ret.get('error_code'))
+            try:    
+                ret = await asyncio.wait_for(session.recv(), 5)
+                # ret = await session.recv()
+                ret = self.session.loads(ret)
+
+                if ret.get('result'):
+                    msg_id = ret['msg_id']
+                    self.kv[msg_id] = ret
+                    if msg_id == 10003:
+                        self.player_id = ret['player_id']
+                        self.player_info = ret['data']['player_info']
+                        self.package = ret['data']['package']
+                        self.cd_pool = ret['data']['player_cd_pool']                        
+                else:
+                    print('\n[ERROR]:\t', ret.get('msg_id'), ret.get('error_code'))
+                    msg_id = ret.get('msg_id')                    
+                    err_cd = ret.get("error_code")
+                    if err_cd and err_cd != 500:
+                        self.kv[msg_id] = ret
             except asyncio.TimeoutError:
                 pass
 
@@ -290,15 +294,15 @@ class GatewayClient(object):
             await asyncio.sleep(0.01)
             ret = self.kv.get(msg_id)
             if ret:
-                t2 = time.time()
-                # print('[RES]\n', 'msg_id:\t', msg_id, '\t', int(t2 * 1000 - t1 * 1000))
-                self.wait_count += 1
-                self.wait_time += int(t2 * 1000 - t1 * 1000)
-                # print('[AVG]\n', self.wait_time / float(self.wait_count))
                 self.kv.pop(msg_id, 0)
+                t2 = time.time()
+                self.wait_count += 1
+                self.wait_time += int(t2 * 1000 - t1 * 1000)                
+                # print('[RES]\n', 'msg_id:\t', msg_id, '\t', int(t2 * 1000 - t1 * 1000))
+                # print('[AVG]\n', self.wait_time / float(self.wait_count))                
                 return ret
         print('[INFO]:\t超时')
-        await asyncio.sleep(2)
+        # await asyncio.sleep(2)
         self.kv.pop(msg_id, 0)
         return None
 
@@ -331,6 +335,15 @@ class GatewayClient(object):
         data['session_key'] = self.session_key
         ret = await self.session.post(data)
         return ret
+
+    async def test_add_level(self):
+        '''msg_id: 3006'''
+        data = {}
+        data['msg_id'] = 3006
+        data['user_id'] = self.user_id
+        data['session_key'] = self.session_key
+        ret = await self.session.post(data)
+        return ret        
 
     async def login(self):
         '''msg_id: 10001'''
@@ -510,6 +523,7 @@ class GatewayClient(object):
         data['user_id'] = self.user_id
         data['avatar_id'] = avatar_id
         data['index'] = index
+        data['count'] = count
         ret = await self.session.post(data)
         # if ret.get('result'):
         #     pass
@@ -777,7 +791,83 @@ class GatewayClient(object):
         ret = await self.session.post(data)
         # if ret.get('result'):
         #     pass
-        return ret                
+        return ret
+
+    async def enter_chat_room(self, room_type, room_id):
+        '''
+        进入聊天室, 开始接收对应聊天室的消息推送
+        msg_id: 100001
+        '''
+        data = {}
+        data['msg_id'] = 100001
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['type'] = room_type
+        data['room_id'] = room_id
+        ret = await self.session.post(data)
+        return ret
+
+    async def exit_chat_room(self, room_type, room_id):
+        '''
+        退出对应聊天室, 取消对应聊天室的消息推送
+        msg_id: 100002
+        '''
+        data = {}
+        data['msg_id'] = 100002
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['type'] = room_type
+        data['room_id'] = room_id
+        ret = await self.session.post(data)
+        return ret
+
+    async def send_message(self, room_type, room_id, msg, *, friend_id=None):
+        '''
+        发送消息
+        msg_id: 100003
+        '''
+        data = {}
+        data['msg_id'] = 100003
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['type'] = room_type
+        data['room_id'] = room_id
+        data['msg'] = msg
+        if friend_id is not None:
+            data['friend_id'] = friend_id
+            data['type'] = 2
+            data['room_id'] = 0
+        if data['type'] == 0:
+            data['room_id'] = 0
+        ret = await self.session.post(data)
+        return ret
+
+    async def get_message(self, room_type, room_id, *, count=30, ts=None, friend_id=None):
+        '''
+        拉取聊天消息
+        msg_id: 100004
+        '''        
+        data = {}
+        data['msg_id'] = 100004
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['type'] = room_type
+        data['room_id'] = room_id
+        data['ts'] = ts
+        data['count'] = count
+        if friend_id is not None:
+            data['friend_id'] = friend_id
+            data['room_id'] = 0
+            data['type'] = 2
+        ret = await self.session.post(data)
+        return ret
+
+    async def push_message(self):
+        '''
+        服务端推送聊天消息
+        msg_id: 100007
+        '''        
+        pass     
 
     async def open_test_switch(self):
         '''

@@ -62,11 +62,14 @@ async def run(client):
         # if 41 <= n <= 50:
         #     await client.avatar_flow()
 
-
-def main():
+def task():
     loop = asyncio.get_event_loop()
     tasks = [start() for _ in range(NUMS)]
     loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+
+
+def main():
+    pass
 
 if __name__ == '__main__':
     main()

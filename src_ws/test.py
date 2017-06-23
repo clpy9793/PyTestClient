@@ -10,11 +10,13 @@ import asyncio
 import unittest
 import pandas as pd
 from client import *
+from collections import defaultdict
 from contextlib import contextmanager
 try:
     import ujson as json
 except ImportError:
     import json
+
 KV = {}
 
 
@@ -70,19 +72,19 @@ class GA(unittest.TestCase):
         self.client.task_list.append(task)
         # await asyncio.sleep(0.1)
 
-    @unittest.skip('skip')
+    # @unittest.skip('skip')
     def test_player(self):
         '''玩家信息'''
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_player())
 
-    @unittest.skip('skip')
+    # @unittest.skip('skip')
     def test_store(self):
         '''商店'''
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_store())
 
-    @unittest.skip('skip')
+    # @unittest.skip('skip')
     def test_level(self):
         '''关卡'''
         loop = asyncio.get_event_loop()
@@ -94,26 +96,36 @@ class GA(unittest.TestCase):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_daily_task())
 
-    @unittest.skip('skip')
+    # @unittest.skip('skip')
     def test_task(self):
         '''任务'''
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_task())
 
-    @unittest.skip("skip")
+    # @unittest.skip("skip")
     def test_mail(self):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_mail())
 
-    @unittest.skip("skip")
+    # @unittest.skip("skip")
     def test_friend(self):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_friend())
 
-    @unittest.skip("skip")
+    # @unittest.skip("skip")
     def test_avatar(self):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_avatar())
+
+    # @unittest.skip("skip")
+    def test_drop(self):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.async_drop())
+
+    # @unittest.skip("skip")
+    def test_chat_room(self):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.async_chat_room())
 
     async def async_player(self):
         ''''''
@@ -193,7 +205,7 @@ class GA(unittest.TestCase):
                     self.pop(20011)
                     await self.client.query_package_data(item[:3])
                     ret = await self.client.wait_for(20011)
-                    self.assertTrue(ret)
+                    self.assertTrue(ret['result'])
                     val = self.client.get_item(*item[:3]) + items[item[1]]
                     self.assertEqual(val, ret['item'][-1], items)
                     self.client.set_item(*ret['item'])
@@ -232,10 +244,12 @@ class GA(unittest.TestCase):
 
         df = pd.read_csv('../static/level.csv')
         for i, v in enumerate(df.MapId):
+            TargetCount = sum(json.loads(df.TargetCount[i]))
+            goal_score = int(TargetCount * 1000)
             self.pop(30001)
             ret = await self.client.enter_level(v)
             ret = await self.wait_for(30001)
-            self.assertTrue(ret, v)
+            self.assertTrue(ret['result'], v)
 
             # 查询过关前获得数量
             drop = ret['drop']
@@ -244,7 +258,7 @@ class GA(unittest.TestCase):
                 self.pop(20011)
                 await self.client.query_package_data(item[:3])
                 ret = await self.client.wait_for(20011)
-                self.assertTrue(ret)
+                self.assertTrue(ret['result'])
                 tmp = ret['item']
                 tmp[-1] += item[-1]
                 query.append(tmp)
@@ -252,9 +266,9 @@ class GA(unittest.TestCase):
             query = {i[1]: i[-1] for i in query}
 
             self.pop(30002)
-            ret = await self.client.complete_level(v, 10000, 100)
+            ret = await self.client.complete_level(v, goal_score, 100)
             ret = await self.wait_for(30002)
-            self.assertTrue(ret, v)
+            self.assertTrue(ret['result'], v)
 
             # 检验过关后获得道具数量
             for item in drop:
@@ -335,16 +349,16 @@ class GA(unittest.TestCase):
         active_gift = None
         for i, v in enumerate(kv.key):
             if v == 'active_gift':
-
                 active_gift = eval(kv.loc[i, 'value'])
                 break
-            
         self.assertTrue(active_gift)
+        active_gift = {int(i): v for i, v in active_gift}
 
         dr = {v: i for i, v in enumerate(df.ID)}
         actives = 0
         await self.add_coin()
 
+        # 每日任务列表
         self.client.pop(60001)
         await self.client.get_daily_task()
         ret = await self.client.wait_for(60001)
@@ -353,7 +367,7 @@ class GA(unittest.TestCase):
             self.assertEqual(v['plan'], 0, k)
             self.assertFalse(v['isFinish'], k)
             self.assertIn(k, dr)
-            print(k, v)
+            # print(k, v)
 
         # 完成每日任务
         for k, v in dr.items():
@@ -363,13 +377,18 @@ class GA(unittest.TestCase):
         for i in active_gift.keys():
             active = int(i)
             if active <= actives:
-                pass
                 # 领取活跃度宝箱
                 self.pop(60003)
                 await self.client.get_daily_task_activity_reward(active)
                 ret = await self.client.wait_for(60003)
                 self.assertTrue(ret)
-        print(actives)
+
+                # 不可重复领奖
+                self.pop(60003)
+                await self.client.get_daily_task_activity_reward(active)
+                ret = await self.client.wait_for(60003)
+                self.assertEqual(ret['error_code'], 60004)
+        # print(actives)
 
 
 
@@ -397,7 +416,7 @@ class GA(unittest.TestCase):
                 self.assertTrue(ret)
 
                 self.client.pop(30002)
-                await self.client.complete_level('MA00101', 10000, 100)
+                await self.client.complete_level('MA00101', 9000, 100)
                 ret = await self.client.wait_for(30002)
                 self.assertTrue(ret)                
 
@@ -409,17 +428,34 @@ class GA(unittest.TestCase):
                 self.assertTrue(ret)
 
                 self.client.pop(30002)
-                await self.client.complete_level('MA00101', 10000, 100)
+                await self.client.complete_level('MA00101', 9000, 100)
                 ret = await self.client.wait_for(30002)
                 self.assertTrue(ret)    
         elif dtype == 'dr_shop':
-            return 0
+            for _ in range(1):
+                self.client.pop(21002)
+                await self.client.buy_store_item('ST10301', count)
+                ret = await self.client.wait_for(21002)
+                self.assertTrue(ret)
+                # AV010001
         elif dtype == 'dr_enc':
-            return 0
+            for _ in range(1):
+                self.client.pop(40009)
+                await self.client.avatar_enchant('AV010001', '0', count)
+                ret = await self.client.wait_for(40009)
+                self.assertTrue(ret)
         elif dtype == 'dr_com':
-            return 0
+            for _ in range(count):
+                self.client.pop(40006)
+                await self.client.avatar_compound('AV010006')
+                ret = await self.client.wait_for(40006)
+                self.assertTrue(ret)
         elif dtype == 'dr_res':
-            return 0
+            for _ in range(count):
+                self.client.pop(40008)
+                await self.client.avatar_resolve('AV010006')
+                ret = await self.client.wait_for(40008)
+                self.assertTrue(ret)
         elif dtype == 'dr_pk_win':
             return 0
         elif dtype == 'dr_pk_times':
@@ -427,9 +463,10 @@ class GA(unittest.TestCase):
         elif dtype == 'dr_share':
             return 0
         elif dtype == 'dr_friend':
-            return 0
+            await self.async_add_friend(count)
         elif dtype == 'dr_friend_like':
-            return 0
+            await self.async_add_friend(count)
+            # return 0
         elif dtype == 'dr_mouth':
             return 0
         # 领取任务奖励
@@ -437,7 +474,59 @@ class GA(unittest.TestCase):
         await self.client.get_daily_task_reward(task_id)
         ret = await self.client.wait_for(60002)
         self.assertTrue(ret)
+        
+        # 不可重复领奖
+        self.pop(60002)
+        await self.client.get_daily_task_reward(task_id)
+        ret = await self.client.wait_for(60002)
+        self.assertEqual(ret['error_code'], 60003)
         return active
+
+    async def async_add_friend(self, count):
+        '''增加好友'''
+        self.client.pop(70001)
+        await self.client.get_friend_list()
+        ret = await self.client.wait_for(70001)
+        fcount = len(ret['friend_list'])
+        clients = []
+        tl = []
+        for i in range(count):
+            c = await GatewayClient.run()
+            clients.append(c)
+            loop = asyncio.get_event_loop()
+            tl.append(loop.create_task(c.event_listen()))
+        # clients = [await GatewayClient.run() for _ in range(count)]
+        for c in clients:
+            self.pop(70003)
+            await self.client.add_friend(c.player_id)
+            ret = await self.client.wait_for(70003)
+            self.assertTrue(ret)
+
+            c.pop(70014)
+            await c.agree_friend_apply(self.client.player_id)
+            ret = await c.wait_for(70014)
+            self.assertTrue(ret)
+
+            # 点赞
+            self.client.pop(73001)
+            await self.client.set_like(c.player_id)
+            ret = await self.client.wait_for(73001)
+            self.assertTrue(ret)
+
+            # 给予能量
+            self.client.pop(75001)
+            await self.client.give_energy(c.player_id)
+            ret = await self.client.wait_for(75001)
+            self.assertTrue(ret)            
+
+        # 取消任务
+        for i in tl:
+            i.cancel()
+
+        self.pop(70001)
+        await self.client.get_friend_list()
+        ret = await self.client.wait_for(70001)
+        self.assertEqual(len(ret['friend_list']), fcount + count)
 
     async def add_coin(self):
         '''添加货币'''
@@ -647,6 +736,184 @@ class GA(unittest.TestCase):
                 ret = await self.client.wait_for(90005)
                 self.assertTrue(ret)
 
+    async def async_drop(self):
+        '''测试概率'''
+        return
+        item = ['item', 'IT0020', 'count', 1000000]
+        self.client.pop(3003)
+        await self.client.test_add_item(item)
+        ret = await self.client.wait_for(3003)
+        self.assertTrue(ret)
+
+        self.client.pop(3004)
+        await self.client.test_add_task()
+        ret = await self.client.wait_for(3004)
+        self.assertTrue(ret)        
+
+        self.client.pop(3006)
+        await self.client.test_add_level()
+        ret = await self.client.wait_for(3006)
+        self.assertTrue(ret)        
+
+        maps = ['MA01208', 'MA01211', 'MA01215']
+        
+
+        for map_id in maps:
+            drops = defaultdict(int)
+            for _ in range(1000):
+                self.client.pop(30001)
+                await self.client.enter_level(map_id)
+                ret = await self.client.wait_for(30001)
+                self.assertTrue(ret)
+                for item in ret['drop']:
+                    drops[item[1]] += item[-1]
+            print('\n\n')
+            print(map_id, '\n')
+            for k, v in drops.items():
+                print('\t', k, '\t', v)
+
+    async def async_chat_room(self):
+        '''
+        测试聊天室
+        '''
+        ts = time.time()
+        # 临时玩家
+        c = await GatewayClient.run()
+        loop = asyncio.get_event_loop()
+        task = loop.create_task(c.event_listen())
+        c.task_list.append(task)
+
+        # 世界聊天
+        room_type, room_id = 0, 0
+
+        # 进入聊天室之前, 不可发送消息
+        self.client.pop(100003)
+        await self.client.send_message(room_type, room_id, '1')
+        ret = await self.client.wait_for(100003)
+        self.assertTrue(ret)
+        self.assertEqual(ret['error_code'], 100001)
+
+
+        # 进入聊天室
+        self.client.pop(100001)
+        
+        await self.client.enter_chat_room(room_type, room_id)
+        ret = await self.client.wait_for(100001)
+        self.assertTrue(ret)
+
+        c.pop(100001)
+        await c.enter_chat_room(room_type, room_id)
+        ret = await c.wait_for(100001)
+        self.assertTrue(ret)
+
+        # 发送消息, 其他人可接收到推送
+        self.client.pop(100003)
+        c.pop(100007)
+        await self.client.send_message(room_type, room_id, '1')
+        ret = await self.client.wait_for(100003)
+        self.assertTrue(ret)
+        
+        ret = await c.wait_for(100007)
+        self.assertTrue(ret, c.player_id)
+        self.assertEqual(ret['msg'], '1')
+
+            
+        # 发送消息, 其他人可接收到推送
+        c.pop(100003)
+        self.client.pop(100007)
+        await c.send_message(room_type, room_id, '2')
+        ret = await c.wait_for(100003)
+        self.assertTrue(ret)
+
+        ret = await self.client.wait_for(100007)
+        self.assertTrue(ret, self.client.player_id)                    
+        self.assertEqual(ret['msg'], '2')
+
+
+        # 退出世界聊天室, 不再接收到推送
+        c.pop(100002)
+        await c.exit_chat_room(room_type, room_id)
+        ret = await c.wait_for(100002)
+        self.assertTrue(ret)
+        c.pop(100007)
+
+        # 发送消息, 其他人可接收到推送
+        self.client.pop(100003)
+        c.pop(100007)
+        await self.client.send_message(room_type, room_id, '3')
+        ret = await self.client.wait_for(100003)
+        self.assertTrue(ret)
+        
+        ret = await c.wait_for(100007, 50)
+        self.assertFalse(ret, c.player_id)
+
+        # 拉取聊天数据
+        self.client.pop(100004)
+        await self.client.get_message(room_type, room_id, count=10)
+        ret = await self.client.wait_for(100004)
+        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
+        count = len(ret['msg_list'])
+        self.assertTrue(count <= 10)
+        for i in ret['msg_list']:
+            if isinstance(i, str):
+                i = json.loads(i)
+
+        # 退出聊天室
+        self.client.pop(100002)
+        await self.client.exit_chat_room(room_type, room_id)
+        ret = await self.client.wait_for(100002)
+        self.assertTrue(ret)
+
+        # 好友私聊
+        self.client.pop(100003)
+        await self.client.send_message(0, 0, '11', friend_id=c.player_id)
+        ret = await self.client.wait_for(100003)
+        self.assertEqual(ret['error_code'], 70016)
+
+
+        # 先添加好友, 再发送私聊
+        self.client.pop(70003)
+        await self.client.add_friend(c.player_id)
+        ret = await self.client.wait_for(70003)
+        self.assertTrue(ret['result'])
+
+        c.pop(70014)
+        await c.agree_friend_apply(self.client.player_id)
+        ret = await c.wait_for(70014)
+        self.assertTrue(ret['result'])
+
+        self.client.pop(100003)
+        c.pop(100007)
+        await self.client.send_message(0, 0, '11', friend_id=c.player_id)
+        ret = await self.client.wait_for(100003)
+        self.assertTrue(ret['result'])
+
+        ret = await c.wait_for(100007)
+        self.assertTrue(ret['result'])
+
+        # 拉取好友私聊消息
+        self.client.pop(100004)
+        await self.client.get_message(0, 0, friend_id=c.player_id)
+        ret = await self.client.wait_for(100004)
+        self.assertTrue(ret['result'])
+        for i in ret['msg_list']:
+            print(i)
+
+        c.pop(100004)
+        await c.get_message(0, 0, friend_id=self.client.player_id)
+        ret = await c.wait_for(100004)
+        self.assertTrue(ret['result'])
+        for i in ret['msg_list']:
+            print(i)
+
+
+
+
+        # 清除
+        for i in c.task_list:
+            # i.cancel()
+            pass
 
 if __name__ == '__main__':
     unittest.main()

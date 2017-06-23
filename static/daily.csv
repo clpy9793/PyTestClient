@@ -1,6 +1,17 @@
-ID,Hint,Times,Path,Award,Active
-DA_0001,HINT_DAILY_COMPOUND,1,{"workShop":{ "type":"CompoundItem"}},"[""currency"", ""IT0011"",""count"", 100]",15
-DA_0002,HINT_DAILY_LEVEL_CONTINUOUS,2,{"level"},"[""item"", ""IT0021"",""count"", 1]",10
-DA_0003,HINT_DAILY_LEVEL,3,{"level"},"[""currency"", ""IT0020"", ""count"", 5]",10
-DA_0004,HINT_DAILY_RESOLVE,4,{"workShop":{ "type":"Resolve"}},"[""currency"", ""IT0020"", ""count"", 5]",15
-DA_0005,HINT_DAILY_ENCHANT,5,{"workShop":{ "type":"EnchantForm"}},"[""currency"", ""IT0020"", ""count"", 5]",15
+ID,Hint,Times,Path,Award,Count,Icon,Active,Cond
+DA_0001,DAILY_TASK_WISH,3,{"wish":true},"[[""currency"", ""IT0011"",""count"", 300]]",300,icon_goldcoins,10,"[[""item"",""dr_wish"",""count"",3]]"
+DA_0002,DAILY_TASK_LEVEL_CONTINUOUS,5,{"level":true},"[[""currency"", ""IT0020"",""count"", 6]]",6,icon_energy,15,"[[""item"",""dr_level_win"",""count"",5]]"
+DA_0003,DAILY_TASK_LEVEL,10,{"level":true},"[[""currency"", ""IT0020"",""count"", 6]]",6,icon_energy,15,"[[""item"",""dr_level_times"",""count"",10]]"
+DA_0004,DAILY_TASK_SHOP,5,{"shop":true},"[[""currency"", ""IT0011"",""count"", 300]]",300,icon_goldcoins,10,"[[""item"",""dr_shop"",""count"",5]]"
+DA_0005,DAILY_TASK_ENCHANT,1,{"workShop":{ "type":"EnchantForm"}},"[[""currency"", ""IT0011"",""count"", 300]]",300,icon_goldcoins,15,"[[""item"",""dr_enc"",""count"",1]]"
+DA_0006,DAILY_TASK_COMPOUND,1,{"workShop":{"type":"CompoundItem"}},"[[""currency"", ""IT0011"",""count"", 300]]",300,icon_goldcoins,15,"[[""item"",""dr_com"",""count"",1]]"
+DA_0007,DAILY_TASK_RESOLVE,3,{"workShop":{ "type":"Resolve"}},"[[""currency"", ""IT0011"",""count"", 300]]",300,icon_goldcoins,10,"[[""item"",""dr_res"",""count"",3]]"
+DA_0008,DAILY_TASK_PK_WIN,3,{"arena":true},"[[""currency"", ""IT0002"",""count"", 15]]",15,icon_starcoin,15,"[[""item"",""dr_pk_win"",""count"",3]]"
+DA_0009,DAILY_TASK_PK,3,{"arena":true},"[[""item"", ""IT0030"",""count"", 50]]",50,icon_star,10,"[[""item"",""dr_pk_times"",""count"",3]]"
+DA_0010,DAILY_TASK_SHARE,6,{"share":true},"[[""currency"", ""IT0002"",""count"", 15]]",15,icon_starcoin,15,"[[""item"",""dr_share"",""count"",6]]"
+DA_0011,DAILY_TASK_ENERGY,5,{"friend":true},"[[""item"", ""IT0030"",""count"", 50]]",50,icon_star,10,"[[""item"",""dr_friend"",""count"",5]]"
+DA_0012,DAILY_TASK_ENERGY,5,{"friend":true},"[[""item"", ""IT0030"",""count"", 50]]",50,icon_star,10,"[[""item"",""dr_friend"",""count"",5]]"
+DA_0013,DAILY_TASK_LIKE,10,{"friend":true},"[[""currency"", ""IT0003"",""count"", 15]]",15,icon_heart,15,"[[""item"",""dr_friend_like"",""count"",10]]"
+DA_0014,DAILY_TASK_LIKE,10,{"friend":true},"[[""currency"", ""IT0003"",""count"", 15]]",15,icon_heart,15,"[[""item"",""dr_friend_like"",""count"",10]]"
+DA_0015,DAILY_TASK_MONEY,1,{"crystal":true},"[[""item"", ""IT0021"",""count"", 1]]",1,icon_crystal,15,"[[""item"",""dr_mouth"",""count"",1]]"
+DA_0016,DAILY_TASK_VIP,1,{"crystal":true},"[[""item"", ""IT0021"",""count"", 2]]",1,icon_vipgift,15,"[[""item"",""dr_mouth"",""count"",2]]"

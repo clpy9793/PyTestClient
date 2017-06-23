@@ -20,33 +20,32 @@ hint_raise_path,prefabs/effect/,
 score_base,1000,
 combo_base_time,3,
 max_combo_count,5,
-combo_base_score,0.1,
+combo_base_score,0.2,
 time_tip_percent,0.15,
-score_time,500,
+score_time,1000,
 punish_time,5,
 revive_time,15,
 revive_add_time,20,
 crystal_store,"[""ST0001"",""ST0002"",""ST0003"",""ST0004"",""ST0005"",""ST0006""]",
 coin_store,ST0011,
-daily_task_activity_reward,"[[""currency"",""IT0011"",""count"",100],[""currency"",""IT0011"",""count"",200],[""currency"",""IT0011"",""count"",300]]",
-daily_task_activity_step,"[30,60,100]",
 daily_task_count,10,
-default_dress,"{""27_0000_25"":1, ""30_0000_05"":1, ""05_0000_04"":1, ""26_0000_24"":1, ""02_0000_01"":1}",Ä¬ÈÏ×°°ç
-friend_number,50,ºÃÓÑÉÏÏŞ
-energy_flask,"[[""IT0021"",""IT0022"",""IT0023""], [""null"", ""ST0022"", ""ST0023""]]",ÌåÁ¦Æ¿
-default_customs,MA00101,Ä¬ÈÏ¹Ø¿¨
-rank_energy,1,Ã¿´ÎÉı¼¶ÌåÁ¦ÉÏÏŞÔö³¤
-change_name,"[""currency"",""IT0001"",""count"",50]",Ã¿´Î¸ü¸ÄÃû×ÖËùĞèÏûºÄ£¨×ê£©
-mail_need,1800,¿Í»§¶ËÃ¿¸ñ¶àÉÙÊ±¼äºóÏò·şÎñÆ÷ÇëÇóÔÄ¶ÁÓÊ¼ş£¨½ô¼±ÓÊ¼şÍ¨¹ıÅÜÂíµÆµÄĞÎÊ½³öÏÖ£©
-item_cooling_time,2,PKµÀ¾ßÀäÈ´CD
-alone_item_cooling_time,1,µ¥»úµÀ¾ßÀäÈ´CD
-arena_item,"[""IT0201"",""IT0202"",""IT0203"",""IT0217""]",¶àÈËÓÎÏ·µÀ¾ß
-arena_theme,"{""season"":1, ""title"":""UI_PK_THEME1"", ""data"":""UI_PK_THEME1_MEAN""}",¶àÈËÓÎÏ·Ö÷ÌâÃû×Ö
-arena_times,"{""0"":4,""1"":6,""2"":6,""3"":4,""4"":3,""5"":5,""6"":13}",¶àÈËÓÎÏ·Ã¿¸öÀàĞÍ³é¶àÉÙÕÅµØÍ¼
-arena_tyep_page,"{""0"":""arena_text"",""1"":""arena_shadow"",""2"":""arena_minpic"",""3"":""arena_diff"",""4"":""arena_jigsaw"",""5"":""arena_type"",""6"":""arena_doubt""}",¶àÈËÓÎÏ·ÀàĞÍºÍ¹Ø¿¨µÄÓ³Éä
-arena_star,5,PK¿ªÊ¼µ¹¼ÆÊ±
-arena_over,10,PK½áÊøµ¹¼ÆÊ±
-avatar_resolve_must_get_id,IT0300,·Ö½â±Ø¶¨µôÂäµÀ¾ßID
-avatar_resolve_must_get_list,"[3, 6, 9, 15, 24]",·Ö½âĞÇ¼¶¶ÔÓ¦µÄ±Ø¶¨»ñµÃµÀ¾ßÊıÁ¿
-avatar_resolve_drop_by_star,"[""AR01"", ""AR02"", ""AR03"", ""AR04"", ""AR05""]",·Ö½âĞÇ¼¶¶ÔÓ¦µÄ¸ÅÂÊ»ñµÃÎïÆ·µôÂä³Ø
-active_gift,"{10:[[""currency"",""IT0001"",""count"",10]],40:[[""currency"",""IT0001"",""count"",15]],80:[[""currency"",""IT0001"",""count"",20],115:[[""currency"",""IT0001"",""count"",25],150:[[""currency"",""IT0001"",""count"",30]]}",»îÔ¾¶ÈÀñ°ü
+default_dress,"{""27_0000_25"":1, ""30_0000_05"":1, ""05_0000_04"":1, ""26_0000_24"":1, ""02_0000_01"":1}",é»˜è®¤è£…æ‰®
+friend_number,50,å¥½å‹ä¸Šé™
+energy_flask,"[[""IT0021"",""IT0022"",""IT0023""], [""null"", ""ST0022"", ""ST0023""]]",ä½“åŠ›ç“¶
+default_customs,MA00101,é»˜è®¤å…³å¡
+rank_energy,1,æ¯æ¬¡å‡çº§ä½“åŠ›ä¸Šé™å¢é•¿
+change_name,"[""currency"",""IT0001"",""count"",50]",æ¯æ¬¡æ›´æ”¹åå­—æ‰€éœ€æ¶ˆè€—ï¼ˆé’»ï¼‰
+mail_need,1800,å®¢æˆ·ç«¯æ¯æ ¼å¤šå°‘æ—¶é—´åå‘æœåŠ¡å™¨è¯·æ±‚é˜…è¯»é‚®ä»¶ï¼ˆç´§æ€¥é‚®ä»¶é€šè¿‡è·‘é©¬ç¯çš„å½¢å¼å‡ºç°ï¼‰
+item_cooling_time,2,PKé“å…·å†·å´CD
+alone_item_cooling_time,1,å•æœºé“å…·å†·å´CD
+arena_item,"[""IT0201"",""IT0202"",""IT0203"",""IT0217""]",å¤šäººæ¸¸æˆé“å…·
+arena_theme,"{""season"":1, ""title"":""UI_PK_THEME1"", ""data"":""UI_PK_THEME1_MEAN""}",å¤šäººæ¸¸æˆä¸»é¢˜åå­—
+arena_times,"{""0"":4,""1"":6,""2"":6,""3"":4,""4"":3,""5"":5,""6"":13}",å¤šäººæ¸¸æˆæ¯ä¸ªç±»å‹æŠ½å¤šå°‘å¼ åœ°å›¾
+arena_tyep_page,"{""0"":""arena_text"",""1"":""arena_shadow"",""2"":""arena_minpic"",""3"":""arena_diff"",""4"":""arena_jigsaw"",""5"":""arena_type"",""6"":""arena_doubt""}",å¤šäººæ¸¸æˆç±»å‹å’Œå…³å¡çš„æ˜ å°„
+arena_star,5,PKå¼€å§‹å€’è®¡æ—¶
+arena_over,10,PKç»“æŸå€’è®¡æ—¶
+avatar_resolve_must_get_id,IT0300,åˆ†è§£å¿…å®šæ‰è½é“å…·ID
+avatar_resolve_must_get_list,"[3, 6, 9, 15, 24]",åˆ†è§£æ˜Ÿçº§å¯¹åº”çš„å¿…å®šè·å¾—é“å…·æ•°é‡
+avatar_resolve_drop_by_star,"[""AR01"", ""AR02"", ""AR03"", ""AR04"", ""AR05""]",åˆ†è§£æ˜Ÿçº§å¯¹åº”çš„æ¦‚ç‡è·å¾—ç‰©å“æ‰è½æ± 
+findDoubtTimes,7,å•çº¿ç–‘ç‚¹åœºæ™¯åˆ‡æ¢å€’è®¡æ—¶
+active_gift,"[[30,[[""currency"",""IT0001"",""count"",3]]], [60,[[""currency"",""IT0001"",""count"",4]]], [90,[[""currency"",""IT0001"",""count"",5]]], [120,[[""currency"",""IT0001"",""count"",6]]],[150,[[""currency"",""IT0001"",""count"",7]]]]",æ´»è·ƒåº¦ç¤¼åŒ…
