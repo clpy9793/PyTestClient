@@ -118,14 +118,44 @@ class GA(unittest.TestCase):
         loop.run_until_complete(self.async_avatar())
 
     # @unittest.skip("skip")
-    def test_drop(self):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.async_drop())
-
-    # @unittest.skip("skip")
     def test_chat_room(self):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.async_chat_room())
+
+    @unittest.skip("skip")
+    def test_drop(self):
+        '''drop掉落概率测试'''
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.async_drop())        
+
+    # @unittest.skip('skip')
+    def test_guide(self):
+        '''引导'''
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.async_guide())
+
+    async def async_guide(self):
+        self.client.pop(60009)
+        await self.client.start_guide()
+        ret = await self.client.wait_for(60009)
+        self.assertTrue(ret['result'])
+
+        self.client.pop(60010)
+        await self.client.finish_guide()
+        ret = await self.client.wait_for(60010)
+        self.assertTrue(ret['result'])
+
+        self.client.pop(60009)
+        await self.client.start_guide()
+        ret = await self.client.wait_for(60009)
+        self.assertEqual(ret['error_code'], 60015)
+
+        self.client.pop(60009)
+        await self.client.start_guide('GGGGG')
+        ret = await self.client.wait_for(60009)
+        self.assertEqual(ret['error_code'], 60014)
+
+
 
     async def async_player(self):
         ''''''
@@ -133,7 +163,7 @@ class GA(unittest.TestCase):
         self.pop(20001)
         await self.client.get_player()
         ret = await self.wait_for(20001)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
         self.assertEqual(self.client.player_info.get('like', 0), ret['like'])
 
         # 修改名字
@@ -158,41 +188,58 @@ class GA(unittest.TestCase):
 
         await self.client.test_add_item(item)
         ret = await self.wait_for(3003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         item = ['currency', 'IT0001', 'count', 100000000]
         ret = await self.client.test_add_item(item)
         ret = await self.wait_for(3003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         item = ['currency', 'IT0002', 'count', 100000000]
         ret = await self.client.test_add_item(item)
         ret = await self.wait_for(3003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         item = ['currency', 'IT0003', 'count', 100000000]
         ret = await self.client.test_add_item(item)
         ret = await self.wait_for(3003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         ret = await self.client.player_login()
         ret = await self.wait_for(10003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
+        # # 测试商品购买
         df = pd.read_csv('../static/store.csv')
-        for item_id in df.Id:
+        for i, item_id in enumerate(df.Id):
             if item_id in ignore_item:
                 continue
+            lock = json.loads(df.Lock[i])
+            if lock:
+                # 解锁条件
+                for item in lock:
+                    self.client.pop(3003)
+                    await self.client.test_add_item(item)
+                    ret = await self.wait_for(3003)
+                    self.assertTrue(ret['result'])
+
             self.pop(21002)
             ret = await self.client.buy_store_item(item_id)
             ret = await self.wait_for(21002)
-            self.assertTrue(ret, item_id)
+            self.assertTrue(ret['result'], item_id)
             print('[INFO]:\tstore\titem_id\t', item_id)
+
+        # 重新登录
+        self.client.pop(10003)
+        await self.client.player_login()
+        ret = await self.client.wait_for(10003)
+        self.assertTrue(ret)
 
         # 测试抽奖
         df = pd.read_csv('../static/lottery.csv')
         for i in df.Id:
             for _ in range(5):
+                # 单抽
                 self.pop(21006)
                 ret = await self.client.get_lottery_reward(i, 1)
                 ret = await self.wait_for(21006)
@@ -206,41 +253,43 @@ class GA(unittest.TestCase):
                     await self.client.query_package_data(item[:3])
                     ret = await self.client.wait_for(20011)
                     self.assertTrue(ret['result'])
-                    val = self.client.get_item(*item[:3]) + items[item[1]]
+                    val = self.client.get_item(*item[:3]) + items[item[1]]                    
                     self.assertEqual(val, ret['item'][-1], items)
-                    self.client.set_item(*ret['item'])
+                    r = self.client.set_item(*ret['item'])
+                    self.assertTrue(r)
 
+                # 十连
                 self.pop(21006)
                 ret = await self.client.get_lottery_reward(i, 2)
                 ret = await self.wait_for(21006)
-                self.assertTrue(ret, (i, 2))
-
+                self.assertTrue(ret['result'], (i, 2))
                 drop = ret['data']
                 items = {x[1]: x[-1] for x in drop}
                 for item in drop:
                     self.pop(20011)
                     await self.client.query_package_data(item[:3])
                     ret = await self.client.wait_for(20011)
-                    self.assertTrue(ret)
+                    self.assertTrue(ret['result'])
                     val = self.client.get_item(*item[:3]) + items[item[1]]
-                    self.assertEqual(val, ret['item'][-1], items)
-                    self.client.set_item(*ret['item'])
+                    self.assertEqual(val, ret['item'][-1], (item))
+                    r = self.client.set_item(*ret['item'])
+                    self.assertTrue(r)
 
     async def async_level(self):
 
         # 测试正常游戏关卡流程
         # 添加能量
-        item = ['item', 'IT0020', 'count', 10000]
+        item = ['currency', 'IT0020', 'count', 10000]
         self.pop(3003)
         ret = await self.client.test_add_item(item)
         ret = await self.wait_for(3003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         # 开启任务
         self.pop(3004)
         ret = await self.client.test_add_task()
         ret = await self.wait_for(3004)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         df = pd.read_csv('../static/level.csv')
         for i, v in enumerate(df.MapId):
@@ -269,6 +318,7 @@ class GA(unittest.TestCase):
             ret = await self.client.complete_level(v, goal_score, 100)
             ret = await self.wait_for(30002)
             self.assertTrue(ret['result'], v)
+            self.assertIn('new_record', ret, v)
 
             # 检验过关后获得道具数量
             for item in drop:
@@ -288,25 +338,25 @@ class GA(unittest.TestCase):
         self.pop(3003)
         await self.client.test_add_item(item)
         ret = await self.wait_for(3003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         item = ['currency', 'IT0001', 'count', 100000000]
         self.pop(3003)
         await self.client.test_add_item(item)
         ret = await self.wait_for(3003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         self.pop(3002)
         ret = await self.client.test_add_all_avatar()
         ret = await self.wait_for(3002)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         compond_list = []
         enchant_list = []
         evolution_list = []
         for i, v in enumerate(df.ID):
 
-            # 组合
+            # 制作
             blue = json.loads(df.Blueprint[i])
             if blue:
                 self.pop(40006)
@@ -315,7 +365,7 @@ class GA(unittest.TestCase):
                 self.assertTrue(ret['result'], v)
                 print('[INFO]: 组合 ', v)
 
-            # 进化
+            # 进阶
             evolution = json.loads(df.EvolutionForm[i])
             if evolution:
                 self.pop(40007)
@@ -342,6 +392,12 @@ class GA(unittest.TestCase):
             self.assertTrue(ret['result'], v)
             print('[INFO]: 分解 ', v)
 
+            # 使用装扮
+            self.client.pop(40002)
+            await self.client.use_avatar(v)
+            ret = await self.wait_for(40002)
+            self.assertTrue(ret['result'])
+
     async def async_daily_task(self):
         # 初始化
         df = pd.read_csv('../static/daily.csv')
@@ -362,7 +418,7 @@ class GA(unittest.TestCase):
         self.client.pop(60001)
         await self.client.get_daily_task()
         ret = await self.client.wait_for(60001)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
         for k, v in ret['List'].items():
             self.assertEqual(v['plan'], 0, k)
             self.assertFalse(v['isFinish'], k)
@@ -381,7 +437,7 @@ class GA(unittest.TestCase):
                 self.pop(60003)
                 await self.client.get_daily_task_activity_reward(active)
                 ret = await self.client.wait_for(60003)
-                self.assertTrue(ret)
+                self.assertTrue(ret['result'])
 
                 # 不可重复领奖
                 self.pop(60003)
@@ -389,8 +445,6 @@ class GA(unittest.TestCase):
                 ret = await self.client.wait_for(60003)
                 self.assertEqual(ret['error_code'], 60004)
         # print(actives)
-
-
 
     async def run_task(self, task_id, dr, df):
         '''进行每日任务'''
@@ -407,55 +461,55 @@ class GA(unittest.TestCase):
                 self.client.pop(21006)
                 await self.client.get_lottery_reward('LY0001', 1)
                 ret = await self.client.wait_for(21006)
-                self.assertTrue(ret)
+                self.assertTrue(ret['result'])
         elif dtype == 'dr_level_win':
             for _ in range(count):
                 self.client.pop(30001)
                 await self.client.enter_level('MA00101')
                 ret = await self.client.wait_for(30001)
-                self.assertTrue(ret)
+                self.assertTrue(ret['result'])
 
                 self.client.pop(30002)
                 await self.client.complete_level('MA00101', 9000, 100)
                 ret = await self.client.wait_for(30002)
-                self.assertTrue(ret)                
+                self.assertTrue(ret['result'])
 
         elif dtype == 'dr_level_times':
             for _ in range(count):
                 self.client.pop(30001)
                 await self.client.enter_level('MA00101')
                 ret = await self.client.wait_for(30001)
-                self.assertTrue(ret)
+                self.assertTrue(ret['result'])
 
                 self.client.pop(30002)
-                await self.client.complete_level('MA00101', 9000, 100)
+                await self.client.complete_level('MA00101', 5000, 100)
                 ret = await self.client.wait_for(30002)
-                self.assertTrue(ret)    
+                self.assertTrue(ret['result'])
         elif dtype == 'dr_shop':
             for _ in range(1):
                 self.client.pop(21002)
                 await self.client.buy_store_item('ST10301', count)
                 ret = await self.client.wait_for(21002)
-                self.assertTrue(ret)
+                self.assertTrue(ret['result'])
                 # AV010001
         elif dtype == 'dr_enc':
             for _ in range(1):
                 self.client.pop(40009)
                 await self.client.avatar_enchant('AV010001', '0', count)
                 ret = await self.client.wait_for(40009)
-                self.assertTrue(ret)
+                self.assertTrue(ret['result'])
         elif dtype == 'dr_com':
             for _ in range(count):
                 self.client.pop(40006)
                 await self.client.avatar_compound('AV010006')
                 ret = await self.client.wait_for(40006)
-                self.assertTrue(ret)
+                self.assertTrue(ret['result'])
         elif dtype == 'dr_res':
             for _ in range(count):
                 self.client.pop(40008)
                 await self.client.avatar_resolve('AV010006')
                 ret = await self.client.wait_for(40008)
-                self.assertTrue(ret)
+                self.assertTrue(ret['result'])
         elif dtype == 'dr_pk_win':
             return 0
         elif dtype == 'dr_pk_times':
@@ -473,8 +527,8 @@ class GA(unittest.TestCase):
         self.pop(60002)
         await self.client.get_daily_task_reward(task_id)
         ret = await self.client.wait_for(60002)
-        self.assertTrue(ret)
-        
+        self.assertTrue(ret['result'])
+
         # 不可重复领奖
         self.pop(60002)
         await self.client.get_daily_task_reward(task_id)
@@ -500,24 +554,24 @@ class GA(unittest.TestCase):
             self.pop(70003)
             await self.client.add_friend(c.player_id)
             ret = await self.client.wait_for(70003)
-            self.assertTrue(ret)
+            self.assertTrue(ret['result'])
 
             c.pop(70014)
             await c.agree_friend_apply(self.client.player_id)
             ret = await c.wait_for(70014)
-            self.assertTrue(ret)
+            self.assertTrue(ret['result'])
 
             # 点赞
             self.client.pop(73001)
             await self.client.set_like(c.player_id)
             ret = await self.client.wait_for(73001)
-            self.assertTrue(ret)
+            self.assertTrue(ret['result'])
 
             # 给予能量
             self.client.pop(75001)
             await self.client.give_energy(c.player_id)
             ret = await self.client.wait_for(75001)
-            self.assertTrue(ret)            
+            self.assertTrue(ret['result'])
 
         # 取消任务
         for i in tl:
@@ -533,34 +587,46 @@ class GA(unittest.TestCase):
         self.pop(3002)
         await self.client.test_add_all_avatar()
         ret = await self.wait_for(3002)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         item = ['currency', 'IT0011', 'count', 100000000]
         self.pop(3003)
         await self.client.test_add_item(item)
         ret = await self.wait_for(3003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         item = ['currency', 'IT0001', 'count', 100000000]
         self.pop(3003)
         await self.client.test_add_item(item)
         ret = await self.wait_for(3003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
     async def async_task(self):
         while True:
             self.pop(60008)
             ret = await self.client.get_task_progress()
             ret = await self.wait_for(60008)
-            self.assertTrue(ret)
-
+            self.assertTrue(ret['result'])
+            df = pd.read_csv('../static/task.csv')
+            task_list = {v: i for i, v in enumerate(df.ID)}
             if ret['progress']:
                 for task_id in ret['progress'].keys():
                     print("[INFO]:\ttask_id\t", task_id)
+                    # 收集物品
+                    gather_list = json.loads(df.GatherList[task_list[task_id]])
+                    for item in gather_list:
+                        count = item[-2] + 1000
+                        self.client.pop(3003)
+                        args = item[:3]
+                        args.extend([count])
+                        await self.client.test_add_item(args)
+                        ret = await self.client.wait_for(3003)
+                        self.assertTrue(ret['result'])
+                    
                     self.pop(60005)
                     ret = await self.client.complete_task(task_id)
                     ret = await self.wait_for(60005)
-                    self.assertTrue(ret)
+                    self.assertTrue(ret['result'])
             else:
                 print(ret)
                 break
@@ -572,20 +638,20 @@ class GA(unittest.TestCase):
         self.pop(70004)
         await self.client.recommend_friend()
         ret = await self.wait_for(70004)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
         li = ret['data']
         for i in li:
             if i[-1]:
                 self.pop(70003)
                 await self.client.add_friend(i[0])
                 ret = await self.wait_for(70003)
-                self.assertTrue(ret)
+                self.assertTrue(ret['result'])
 
         # 测试推荐好友的申请状态
         self.pop(70004)
         await self.client.recommend_friend()
         ret = await self.wait_for(70004)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
         li = ret['data']
         for i in li:
             self.assertFalse(i[-1])
@@ -599,26 +665,26 @@ class GA(unittest.TestCase):
         self.pop(70003)
         await self.client.add_friend(friend_id)
         ret = await self.wait_for(70003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         # 同意申请
         c.pop(70013)
         await c.get_apply_list()
         ret = await c.wait_for(70013)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         li = ret['data']
         for i in li:
             c.pop(70014)
             await c.agree_friend_apply(i[0])
             ret = await c.wait_for(70014)
-            self.assertTrue(ret)
+            self.assertTrue(ret['result'])
 
         # 好友列表
         self.client.pop(70001)
         await self.client.get_friend_list()
         ret = await self.client.wait_for(70001)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
         li = {i[0] for i in ret['friend_list']}
         self.assertIn(c.player_id, li)
 
@@ -626,13 +692,13 @@ class GA(unittest.TestCase):
         self.client.pop(73001)
         await self.client.set_like(c.player_id)
         ret = await self.client.wait_for(73001)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         # 给予体力
         self.client.pop(75001)
         await self.client.give_energy(c.player_id)
         ret = await self.client.wait_for(75001)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         # 领取体力
         c.pop(75003)
@@ -644,18 +710,18 @@ class GA(unittest.TestCase):
         self.client.pop(75002)
         await self.client.ask_energy(c.player_id)
         ret = await self.client.wait_for(75002)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         # 回赠
         self.client.pop(75003)
         await self.client.get_energy()
         ret = await self.client.wait_for(75003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         c.pop(75001)
         await c.give_energy(self.client.player_id)
         ret = await c.wait_for(75001)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         self.client.pop(75003)
         await self.client.get_energy()
@@ -672,7 +738,7 @@ class GA(unittest.TestCase):
             c.pop(70002)
             await c.del_friend(i[0])
             ret = await c.wait_for(70002)
-            self.assertTrue(ret)
+            self.assertTrue(ret['result'])
 
         self.client.pop(70001)
         await self.client.get_friend_list()
@@ -683,24 +749,24 @@ class GA(unittest.TestCase):
         self.client.pop(70003)
         await self.client.add_friend(c.player_id)
         ret = await self.client.wait_for(70003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         c.pop(70013)
         await c.get_apply_list()
         ret = await c.wait_for(70013)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
         li = ret['data']
         self.assertIn(self.client.player_id, [i[0] for i in li])
 
         c.pop(70015)
         ret = await c.refuse_friend_apply(self.client.player_id)
         ret = await c.wait_for(70015)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         c.pop(70013)
         await c.get_apply_list()
         ret = await c.wait_for(70013)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
         li = ret['data']
         self.assertNotIn(self.client.player_id, [i[0] for i in li])
 
@@ -713,7 +779,7 @@ class GA(unittest.TestCase):
         self.client.pop(90001)
         await self.client.get_mail_list()
         ret = await self.client.wait_for(90001)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         for k, v in ret['data'].items():
             if not v['isRead']:
@@ -721,12 +787,12 @@ class GA(unittest.TestCase):
                 self.client.pop(90004)
                 await self.client.read_mail(int(k))
                 ret = await self.client.wait_for(90004)
-                self.assertTrue(ret)
+                self.assertTrue(ret['result'])
 
         self.client.pop(90001)
         await self.client.get_mail_list()
         ret = await self.client.wait_for(90001)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
         for k, v in ret['data'].items():
             if v['isRead']:
                 self.assertTrue(v['items'])
@@ -734,7 +800,7 @@ class GA(unittest.TestCase):
                 self.client.pop(90005)
                 await self.client.get_mail_reward(int(k))
                 ret = await self.client.wait_for(90005)
-                self.assertTrue(ret)
+                self.assertTrue(ret['result'])
 
     async def async_drop(self):
         '''测试概率'''
@@ -743,20 +809,19 @@ class GA(unittest.TestCase):
         self.client.pop(3003)
         await self.client.test_add_item(item)
         ret = await self.client.wait_for(3003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         self.client.pop(3004)
         await self.client.test_add_task()
         ret = await self.client.wait_for(3004)
-        self.assertTrue(ret)        
+        self.assertTrue(ret['result'])
 
         self.client.pop(3006)
         await self.client.test_add_level()
         ret = await self.client.wait_for(3006)
-        self.assertTrue(ret)        
+        self.assertTrue(ret['result'])
 
         maps = ['MA01208', 'MA01211', 'MA01215']
-        
 
         for map_id in maps:
             drops = defaultdict(int)
@@ -764,7 +829,7 @@ class GA(unittest.TestCase):
                 self.client.pop(30001)
                 await self.client.enter_level(map_id)
                 ret = await self.client.wait_for(30001)
-                self.assertTrue(ret)
+                self.assertTrue(ret['result'])
                 for item in ret['drop']:
                     drops[item[1]] += item[-1]
             print('\n\n')
@@ -790,51 +855,48 @@ class GA(unittest.TestCase):
         self.client.pop(100003)
         await self.client.send_message(room_type, room_id, '1')
         ret = await self.client.wait_for(100003)
-        self.assertTrue(ret)
+        self.assertFalse(ret['result'])
         self.assertEqual(ret['error_code'], 100001)
-
 
         # 进入聊天室
         self.client.pop(100001)
-        
+
         await self.client.enter_chat_room(room_type, room_id)
         ret = await self.client.wait_for(100001)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         c.pop(100001)
         await c.enter_chat_room(room_type, room_id)
         ret = await c.wait_for(100001)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         # 发送消息, 其他人可接收到推送
         self.client.pop(100003)
         c.pop(100007)
         await self.client.send_message(room_type, room_id, '1')
         ret = await self.client.wait_for(100003)
-        self.assertTrue(ret)
-        
+        self.assertTrue(ret['result'])
+
         ret = await c.wait_for(100007)
         self.assertTrue(ret, c.player_id)
         self.assertEqual(ret['msg'], '1')
 
-            
         # 发送消息, 其他人可接收到推送
         c.pop(100003)
         self.client.pop(100007)
         await c.send_message(room_type, room_id, '2')
         ret = await c.wait_for(100003)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         ret = await self.client.wait_for(100007)
-        self.assertTrue(ret, self.client.player_id)                    
+        self.assertTrue(ret, self.client.player_id)
         self.assertEqual(ret['msg'], '2')
-
 
         # 退出世界聊天室, 不再接收到推送
         c.pop(100002)
         await c.exit_chat_room(room_type, room_id)
         ret = await c.wait_for(100002)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
         c.pop(100007)
 
         # 发送消息, 其他人可接收到推送
@@ -842,8 +904,8 @@ class GA(unittest.TestCase):
         c.pop(100007)
         await self.client.send_message(room_type, room_id, '3')
         ret = await self.client.wait_for(100003)
-        self.assertTrue(ret)
-        
+        self.assertTrue(ret['result'])
+
         ret = await c.wait_for(100007, 50)
         self.assertFalse(ret, c.player_id)
 
@@ -851,7 +913,7 @@ class GA(unittest.TestCase):
         self.client.pop(100004)
         await self.client.get_message(room_type, room_id, count=10)
         ret = await self.client.wait_for(100004)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
         self.assertTrue(ret['result'])
         count = len(ret['msg_list'])
         self.assertTrue(count <= 10)
@@ -863,14 +925,13 @@ class GA(unittest.TestCase):
         self.client.pop(100002)
         await self.client.exit_chat_room(room_type, room_id)
         ret = await self.client.wait_for(100002)
-        self.assertTrue(ret)
+        self.assertTrue(ret['result'])
 
         # 好友私聊
         self.client.pop(100003)
         await self.client.send_message(0, 0, '11', friend_id=c.player_id)
         ret = await self.client.wait_for(100003)
         self.assertEqual(ret['error_code'], 70016)
-
 
         # 先添加好友, 再发送私聊
         self.client.pop(70003)
@@ -906,9 +967,6 @@ class GA(unittest.TestCase):
         self.assertTrue(ret['result'])
         for i in ret['msg_list']:
             print(i)
-
-
-
 
         # 清除
         for i in c.task_list:

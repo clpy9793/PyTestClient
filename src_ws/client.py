@@ -269,6 +269,8 @@ class GatewayClient(object):
                 return self.package[package][item_id][0]
             return 0
         except Exception:
+            # import traceback
+            # traceback.print_exc()
             return 0
 
     def set_item(self, package, item_id, attr, val):
@@ -447,7 +449,7 @@ class GatewayClient(object):
         data['session_key'] = self.session_key
         data['user_id'] = self.user_id
         data['lottery_id'] = lottery_id
-        data['ltype'] = ltype
+        data['type'] = ltype
         ret = await self.session.post(data)
         # if ret.get('result'):
         #     pass
@@ -475,8 +477,19 @@ class GatewayClient(object):
         data['score'] = score
         data['coin'] = coin
         ret = await self.session.post(data)
-        # if ret.get('result'):
-        #     pass
+        return ret
+
+    async def use_avatar(self, avatar_id):
+        '''
+        msg_id: 40002
+        使用装扮
+        '''
+        data = {}
+        data['msg_id'] = 40002
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['id'] = avatar_id
+        ret = await self.session.post(data)
         return ret
 
     async def avatar_compound(self, avatar_id):
@@ -503,13 +516,13 @@ class GatewayClient(object):
         #     pass
         return ret
 
-    async def avatar_resolve(self, avatar_id):
+    async def avatar_resolve(self, avatar_id, count=1):
         '''msg_id: 40008'''
         data = {}
         data['msg_id'] = 40008
         data['session_key'] = self.session_key
         data['user_id'] = self.user_id
-        data['avatar_id'] = {avatar_id: 1}
+        data['avatar_id'] = {avatar_id: count}
         ret = await self.session.post(data)
         # if ret.get('result'):
         #     pass
@@ -578,9 +591,31 @@ class GatewayClient(object):
         data['session_key'] = self.session_key
         data['user_id'] = self.user_id
         ret = await self.session.post(data)
-        # if ret.get('result'):
-        #     pass
         return ret
+
+    async def start_guide(self, guide=None):
+        '''msg_id: 60009'''
+        if guide is None:
+            guide = 'GU0001'
+        data = {}
+        data['msg_id'] = 60009
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['guide_id'] = guide
+        ret = await self.session.post(data)
+        return ret
+
+    async def finish_guide(self, guide=None):
+        '''msg_id: 60010'''
+        if guide is None:
+            guide = 'GU0001'
+        data = {}
+        data['msg_id'] = 60010
+        data['session_key'] = self.session_key
+        data['user_id'] = self.user_id
+        data['guide_id'] = guide
+        ret = await self.session.post(data)
+        return ret        
 
     async def get_friend_list(self):
         '''msg_id: 70001'''
@@ -875,6 +910,34 @@ class GatewayClient(object):
         增加金币, 钻石, 能量
         '''
         pass
+        # 添加能量
+        item = ['currency', 'IT0020', 'count', 10000]
+        self.pop(3003)
+        ret = await self.test_add_item(item)
+        ret = await self.wait_for(3003)
+
+        # 金币
+        item = ['currency', 'IT0011', 'count', 100000000]
+        await self.client.test_add_item(item)
+        ret = await self.wait_for(3003)
+        self.assertTrue(ret['result'])
+
+        # 钻石
+        item = ['currency', 'IT0001', 'count', 100000000]
+        ret = await self.client.test_add_item(item)
+        ret = await self.wait_for(3003)
+        self.assertTrue(ret['result']) 
+
+        # PK币
+        item = ['currency', 'IT0002', 'count', 100000000]
+        ret = await self.test_add_item(item)
+        ret = await self.wait_for(3003)
+
+        # 爱心币
+        item = ['currency', 'IT0003', 'count', 100000000]
+        ret = await self.test_add_item(item)
+        ret = await self.wait_for(3003)
+
 
     async def game_flow(self):
         '''模拟单线游戏'''
@@ -904,15 +967,53 @@ class GatewayClient(object):
 
     async def store_flow(self):
         '''模拟商店行为'''
+        # 随机一件物品购买
         pass
 
     async def chat_flow(self):
         '''模拟聊天行为'''
+        # 世界聊天
+        # 进入聊天室
+        room_type = 0
+        room_id = 0
+        self.pop(100001)
+        await self.enter_chat_room(room_type, room_id)
+        ret = await self.wait_for(100001)
+        if not ret['result']:
+            return
+        await asyncio.sleep(3)
+
+        # 模拟聊天
+        s = pd.Series(range(0, 15))
+        count = int(s.sample(1, weights=list(range(15, 0, -1))))
+        for i in range(count):
+            self.pop(100003)
+            await self.send_message(room_type, room_id, 'xxxxx')
+            await asyncio.sleep(random.randint(1, 3))
+
+        # 退出聊天室
+        self.pop(100002)
+        await self.exit_chat_room(room_type, room_id)
+
+    async def daily_task_flow(self):
+        '''
+        模拟
+        '''
         pass
 
     async def avatar_flow(self):
         '''模拟 Avatar 行为'''
-        pass
+        # 分解
+        if 'avatar' not in self.package:
+            return
+        for k, v in self.package['avatar'].items():
+            if v[0] == 0:
+                continue
+            self.pop(40008)
+            await self.avatar_resolve(k)
+            await asyncio.sleep(random.randint(1, 5))
+
+        await asyncio.sleep(random.randint(3, 5))
 
 
 def main():
